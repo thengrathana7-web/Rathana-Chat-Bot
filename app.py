@@ -1,33 +1,45 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, session
+import sqlite3
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'rathana_secret_key_123'
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# បង្កើត Database សម្រាប់រក្សាសារ
+def init_db():
+    conn = sqlite3.connect('chat.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS messages 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, msg TEXT, time TEXT)''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
-
-@app.route('/register', methods=['POST'])
-def register():
-    username = request.form.get('username')
-    if username:
-        session['username'] = username
-        return redirect(url_for('chat'))
-    return redirect(url_for('index'))
-
-@app.route('/chat')
-def chat():
-    if 'username' not in session:
-        return redirect(url_for('index'))
-    return render_template('chat.html', username=session['username'])
+    return render_template('chat.html')
 
 @socketio.on('message')
 def handle_message(data):
+    # រក្សាសារទុកក្នុង Database
+    conn = sqlite3.connect('chat.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO messages (name, msg, time) VALUES (?, ?, ?)", 
+              (data['name'], data['msg'], data['time']))
+    conn.commit()
+    conn.close()
     emit('message', data, broadcast=True)
 
+@socketio.on('load_history')
+def load_history():
+    conn = sqlite3.connect('chat.db')
+    c = conn.cursor()
+    c.execute("SELECT name, msg, time FROM messages ORDER BY id ASC")
+    history = [{'name': row[0], 'msg': row[1], 'time': row[2]} for row in c.fetchall()]
+    conn.close()
+    emit('history', history)
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=5000)
