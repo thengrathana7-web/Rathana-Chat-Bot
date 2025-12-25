@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
@@ -12,8 +12,6 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS messages 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, msg TEXT, time TEXT, type TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (phone TEXT PRIMARY KEY, nickname TEXT, username TEXT, photo TEXT)''')
     conn.commit()
     conn.close()
 
@@ -27,7 +25,6 @@ def index():
 def handle_message(data):
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
-    # រក្សាសារ (type អាចជា 'text', 'voice', ឬ 'emoji')
     c.execute("INSERT INTO messages (name, msg, time, type) VALUES (?, ?, ?, ?)", 
               (data['name'], data['msg'], data['time'], data.get('type', 'text')))
     conn.commit()
