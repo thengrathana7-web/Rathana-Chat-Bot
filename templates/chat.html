@@ -5,6 +5,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* រក្សា Style ចាស់របស់អ្នកទាំងអស់ */
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background: #084d6e; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         #app-container { flex: 1; display: flex; flex-direction: column; position: relative; }
         .header-search { padding: 12px; background: #084d6e; border-bottom: 1px solid rgba(255,255,255,0.1); }
@@ -26,7 +27,6 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         #settings-view { display: none; position: absolute; inset: 0; background: white; z-index: 100; padding: 25px; text-align: center; }
         #set-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #34aadc; margin: 20px auto; display: block; }
-        .setting-field { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
         .save-btn { width: 100%; padding: 15px; background: #34aadc; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
         .logout-btn { color: #ff4d4d; border: 1px solid #ff4d4d; padding: 10px 25px; border-radius: 25px; cursor: pointer; display: inline-block; margin-top: 30px; font-weight: bold; }
         .nav-bar { height: 65px; background: white; display: flex; border-top: 1px solid #eee; }
@@ -53,11 +53,10 @@
 
         <div id="settings-view">
             <h2>ការកំណត់ Profile</h2>
-            <img id="set-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" onclick="document.getElementById('profile-up').click()">
+            <img id="set-img" src="{{ photo }}" onclick="document.getElementById('profile-up').click()">
             <input type="file" id="profile-up" hidden accept="image/*" onchange="previewProfile(event)">
-            <input type="text" id="name-field" class="setting-field" placeholder="ឈ្មោះបង្ហាញ">
-            <input type="text" id="user-field" class="setting-field" placeholder="@username">
-            <button class="save-btn" onclick="saveAll()">រក្សាទុក</button>
+            <p>អ្នកកំពុងប្រើ៖ <b>{{ name }}</b></p>
+            <div class="logout-btn" onclick="window.location.href='/logout'">ចាកចេញពីគណនី (Logout)</div>
             <p onclick="showTab('chat')" style="color:#34aadc; cursor:pointer; margin-top:20px;">ត្រឡប់ទៅឆាតវិញ</p>
         </div>
 
@@ -71,8 +70,12 @@
         const socket = io();
         let mediaRecorder, audioChunks = [], isRecording = false;
         let currentRoom = "private_room_1";
-        let userProfile = JSON.parse(localStorage.getItem('rathana_chat_user')) || {
-            name: 'Rathana', username: '@rathana', photo: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
+        
+        // ទាញយកព័ត៌មានពី Server Session
+        let userProfile = {
+            name: "{{ name }}",
+            username: "{{ username }}",
+            photo: "{{ photo }}"
         };
 
         socket.emit('join', { room: currentRoom });
@@ -84,7 +87,6 @@
             document.getElementById('set-tab').classList.toggle('active', t === 'settings');
         }
 
-        // --- មុខងារសំខាន់ៗដែលត្រូវតែដើរ ---
         function addEmoji() { document.getElementById('msg-input').value += "😊"; }
 
         function sendMsg() {
@@ -125,23 +127,10 @@
                         reader.readAsDataURL(audioBlob); audioChunks = [];
                     };
                     mediaRecorder.start(); isRecording = true; micIcon.classList.add('recording');
-                } catch(e) { alert("សូមអនុញ្ញាតឱ្យប្រើ Microphone!"); }
+                } catch(e) { alert("Microphone Error!"); }
             } else {
                 mediaRecorder.stop(); isRecording = false; micIcon.classList.remove('recording');
             }
-        }
-
-        function previewProfile(e) {
-            const reader = new FileReader();
-            reader.onload = () => { document.getElementById('set-img').src = reader.result; userProfile.photo = reader.result; };
-            reader.readAsDataURL(e.target.files[0]);
-        }
-
-        function saveAll() {
-            userProfile.name = document.getElementById('name-field').value || userProfile.name;
-            userProfile.username = document.getElementById('user-field').value || userProfile.username;
-            localStorage.setItem('rathana_chat_user', JSON.stringify(userProfile));
-            alert("ជោគជ័យ!");
         }
 
         socket.on('message', d => {
@@ -158,12 +147,6 @@
             wrap.appendChild(pic); wrap.appendChild(mDiv);
             container.appendChild(wrap); container.scrollTop = container.scrollHeight;
         });
-
-        window.onload = () => {
-            document.getElementById('set-img').src = userProfile.photo;
-            document.getElementById('name-field').value = userProfile.name;
-            document.getElementById('user-field').value = userProfile.username;
-        };
     </script>
 </body>
 </html>
