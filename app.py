@@ -1,22 +1,17 @@
 import os
 import sqlite3
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'rathana_secure_key_123' # សម្រាប់ការពារ Session
+app.config['SECRET_KEY'] = 'rathana_secure_123'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# បង្កើត Database សម្រាប់ Profile និង សារឆាត (Messages)
 def init_db():
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
-    # តារាងរក្សាគណនីអ្នកប្រើ
-    c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (username TEXT PRIMARY KEY, password TEXT, name TEXT, photo TEXT)''')
-    # តារាងរក្សាសារឆាតទាំងអស់ (ដើម្បីកុំឱ្យបាត់សារពេល Refresh)
-    c.execute('''CREATE TABLE IF NOT EXISTS messages 
-                 (room TEXT, sender TEXT, msg TEXT, photo TEXT, time TEXT)''')
+    c.execute('CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT, name TEXT, photo TEXT)')
+    c.execute('CREATE TABLE IF NOT EXISTS messages (room TEXT, sender TEXT, msg TEXT, photo TEXT, time TEXT)')
     conn.commit()
     conn.close()
 
@@ -32,18 +27,16 @@ def index():
 def register():
     username = request.form.get('username')
     password = request.form.get('password')
-    name = username 
     photo = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
     try:
         conn = sqlite3.connect('chat.db')
         c = conn.cursor()
-        c.execute("INSERT INTO users (username, password, name, photo) VALUES (?, ?, ?, ?)",
-                  (username, password, name, photo))
+        c.execute("INSERT INTO users VALUES (?, ?, ?, ?)", (username, password, username, photo))
         conn.commit()
         conn.close()
-        return "ចុះឈ្មោះជោគជ័យ! <a href='/'>ត្រឡប់ទៅ Login</a>"
+        return redirect(url_for('index'))
     except:
-        return "ឈ្មោះនេះមានគេប្រើរួចហើយ! <a href='/'>ព្យាយាមម្តងទៀត</a>"
+        return "ឈ្មោះនេះមានគេប្រើរួចហើយ!"
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -55,38 +48,32 @@ def login():
     user = c.fetchone()
     conn.close()
     if user:
-        session['username'] = user[0]
-        session['name'] = user[2]
-        session['photo'] = user[3]
+        session['username'], session['name'], session['photo'] = user[0], user[2], user[3]
         return redirect(url_for('index'))
-    return "ឈ្មោះអ្នកប្រើ ឬលេខសម្ងាត់មិនត្រឹមត្រូវ! <a href='/'>ព្យាយាមម្តងទៀត</a>"
+    return "ខុសលេខសម្ងាត់!"
 
 @app.route('/logout')
 def logout():
-    session.clear() # លុបទិន្នន័យ Login ចេញ
+    session.clear()
     return redirect(url_for('index'))
 
 @socketio.on('join')
 def on_join(data):
     room = data['room']
     join_room(room)
-    # ទាញយកប្រវត្តិឆាតចាស់ៗពី Database មកបង្ហាញឡើងវិញ
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
     c.execute("SELECT sender, msg, photo, time FROM messages WHERE room=? ORDER BY rowid ASC", (room,))
-    history = c.fetchall()
-    conn.close()
-    for h in history:
+    for h in c.fetchall():
         emit('message', {'name': h[0], 'msg': h[1], 'photo': h[2], 'time': h[3]})
+    conn.close()
 
 @socketio.on('message')
 def handle_message(data):
-    room = data.get('room', 'private_room_1')
-    # រក្សាទុកសារចូលក្នុង Database រាល់ពេលមានការផ្ញើ
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
-    c.execute("INSERT INTO messages (room, sender, msg, photo, time) VALUES (?, ?, ?, ?, ?)",
-              (room, data['name'], data['msg'], data['photo'], data['time']))
+    c.execute("INSERT INTO messages VALUES (?, ?, ?, ?, ?)", 
+              (data.get('room', 'main'), data['name'], data['msg'], data['photo'], data['time']))
     conn.commit()
     conn.close()
     emit('message', data, broadcast=True)
