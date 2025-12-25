@@ -1,12 +1,11 @@
 import os
 import sqlite3
-from flask import Flask, render_template, request
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# បង្កើត Database សម្រាប់សារ និង Profile
 def init_db():
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
