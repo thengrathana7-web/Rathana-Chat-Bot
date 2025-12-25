@@ -1,108 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Rathana Telegram Clone</title>
+    <title>Telegram Clone</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: #084d6e; margin: 0; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        body { font-family: sans-serif; background-color: #084d6e; margin: 0; display: flex; justify-content: center; height: 100vh; }
         #app-container { width: 100%; max-width: 500px; background: white; display: flex; flex-direction: column; position: relative; }
-        
-        /* Search Bar (ចំណុចលេខ ១ របស់អ្នក) */
         .search-container { padding: 10px; background: #084d6e; }
         .search-bar { width: 100%; padding: 8px; border-radius: 20px; border: none; outline: none; background: #063d57; color: white; text-align: center; }
-
-        /* Chat Area */
-        #msg-container { flex: 1; overflow-y: auto; padding: 15px; background: #084d6e; }
-        .msg { max-width: 75%; padding: 8px 12px; margin: 5px 0; border-radius: 12px; font-size: 15px; color: #000; }
+        #msg-container { flex: 1; overflow-y: auto; padding: 15px; background: #084d6e; display: flex; flex-direction: column; }
+        .msg { max-width: 75%; padding: 8px 12px; margin: 5px 0; border-radius: 12px; font-size: 15px; }
         .sent { align-self: flex-end; background: #effdde; }
         .received { align-self: flex-start; background: white; }
-
-        /* Input Area (Emoji & Voice) */
         #input-area { padding: 10px; display: flex; align-items: center; border-top: 1px solid #ddd; gap: 10px; }
-        .icon-btn { cursor: pointer; font-size: 20px; color: #888; }
-
-        /* Settings Screen */
         #settings-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10; padding: 20px; box-sizing: border-box; }
-        .profile-pic { width: 100px; height: 100px; border-radius: 50%; background: #ddd; margin: 0 auto 20px; display: block; object-fit: cover; }
-        
-        /* Bottom Nav */
+        .profile-pic { width: 100px; height: 100px; border-radius: 50%; background: #ddd; margin: 0 auto 20px; display: block; }
         .bottom-nav { height: 60px; display: flex; border-top: 1px solid #ddd; background: #f9f9f9; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #888; }
-        .nav-item.active { color: #34aadc; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #888; }
     </style>
 </head>
 <body>
     <div id="app-container">
         <div id="main-view" style="display: flex; flex-direction: column; height: 100%;">
-            <div class="search-container"><input type="text" class="search-bar" placeholder="Search for messages or users"></div>
-            <div id="msg-container" style="display: flex; flex-direction: column;"></div>
+            <div class="search-container"><input type="text" class="search-bar" placeholder="Search"></div>
+            <div id="msg-container"></div>
             <div id="input-area">
-                <span class="icon-btn" onclick="addEmoji()">😊</span>
+                <span style="cursor:pointer" onclick="document.getElementById('msg-input').value+='😊'">😊</span>
                 <input type="text" id="msg-input" style="flex:1; border:none; outline:none;" placeholder="Message">
-                <span class="icon-btn" id="voice-btn" onmousedown="startVoice()" onmouseup="stopVoice()">🎤</span>
+                <span id="voice-btn" style="cursor:pointer" onmousedown="this.style.color='red'" onmouseup="this.style.color=''">🎤</span>
                 <button onclick="send()" style="border:none; background:none; color:#34aadc; font-weight:bold;">SEND</button>
             </div>
         </div>
-
         <div id="settings-screen">
             <h3>Settings</h3>
-            <img id="display-photo" class="profile-pic" src="https://via.placeholder.com/100" onclick="document.getElementById('file-input').click()">
-            <input type="file" id="file-input" style="display:none" onchange="uploadPhoto(this)">
-            <p>Name: <input type="text" id="set-name" placeholder="Enter Name"></p>
-            <p>Username: <input type="text" id="set-username" placeholder="@username"></p>
-            <button onclick="saveSettings()" style="width:100%; padding:10px; background:#34aadc; color:white; border:none; border-radius:5px;">Save Settings</button>
-            <button onclick="toggleView('main')" style="width:100%; margin-top:10px; border:none; background:none; color:red;">Back</button>
+            <div class="profile-pic" onclick="alert('Upload Photo')"></div>
+            <input type="text" id="set-name" placeholder="Name" style="width:100%; margin-bottom:10px;">
+            <input type="text" id="set-username" placeholder="@username" style="width:100%; margin-bottom:10px;">
+            <button onclick="toggleView('main')" style="width:100%; padding:10px; background:#34aadc; color:white; border:none;">Save</button>
         </div>
-
         <div class="bottom-nav">
             <div class="nav-item" onclick="toggleView('main')">👤<br>Contacts</div>
-            <div class="nav-item active" onclick="toggleView('main')">💬<br>Chats</div>
+            <div class="nav-item" onclick="toggleView('main')">💬<br>Chats</div>
             <div class="nav-item" onclick="toggleView('settings')">⚙️<br>Settings</div>
         </div>
     </div>
-
     <script>
         const socket = io();
-        let myId = "Rathana"; // ប្តូរតាម User ពិតប្រាកដ
-
-        function toggleView(view) {
-            document.getElementById('main-view').style.display = view === 'main' ? 'flex' : 'none';
-            document.getElementById('settings-screen').style.display = view === 'settings' ? 'block' : 'none';
+        let myName = "User";
+        function toggleView(v) { 
+            document.getElementById('main-view').style.display = v==='main'?'flex':'none';
+            document.getElementById('settings-screen').style.display = v==='settings'?'block':'none';
         }
-
         function send() {
-            const input = document.getElementById('msg-input');
-            if (input.value) {
-                const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                socket.emit('message', { name: myId, msg: input.value, time: time, type: 'text' });
-                input.value = '';
+            const el = document.getElementById('msg-input');
+            if(el.value) {
+                const t = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                socket.emit('message', {name: myName, msg: el.value, time: t});
+                el.value = '';
             }
         }
-
-        function addEmoji() {
-            document.getElementById('msg-input').value += "😊";
-        }
-
-        function startVoice() {
-            document.getElementById('voice-btn').style.color = "red";
-            console.log("Recording...");
-        }
-
-        function stopVoice() {
-            document.getElementById('voice-btn').style.color = "#888";
-            alert("Voice message sent!"); // មុខងារ voice ពិតប្រាកដត្រូវការកូដបន្ថែមសម្រាប់ Mic
-        }
-
-        socket.on('message', addMessage);
-        function addMessage(data) {
-            const container = document.getElementById('msg-container');
+        socket.on('message', (d) => {
+            const c = document.getElementById('msg-container');
             const div = document.createElement('div');
-            div.className = `msg ${data.name === myId ? 'sent' : 'received'}`;
-            div.innerHTML = `${data.msg} <span style="font-size:10px; opacity:0.5; margin-left:8px;">${data.time}</span>`;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
+            div.className = `msg ${d.name === myName ? 'sent' : 'received'}`;
+            div.innerHTML = `${d.msg} <span style="font-size:10px; opacity:0.5;">${d.time}</span>`;
+            c.appendChild(div);
+            c.scrollTop = c.scrollHeight;
+        });
+        socket.emit('load_history');
     </script>
 </body>
 </html>
