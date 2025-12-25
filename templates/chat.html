@@ -1,74 +1,133 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Telegram Clone</title>
+    <title>Rathana Chat Bot</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; background-color: #084d6e; margin: 0; display: flex; justify-content: center; height: 100vh; }
-        #app-container { width: 100%; max-width: 500px; background: white; display: flex; flex-direction: column; position: relative; }
-        .search-container { padding: 10px; background: #084d6e; }
-        .search-bar { width: 100%; padding: 8px; border-radius: 20px; border: none; outline: none; background: #063d57; color: white; text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #084d6e; margin: 0; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        #app-container { width: 100%; max-width: 500px; background: white; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        
+        /* Search Bar */
+        .search-container { padding: 12px; background: #084d6e; display: flex; align-items: center; }
+        .search-bar { width: 100%; padding: 10px; border-radius: 8px; border: none; outline: none; background: #063d57; color: white; text-align: left; padding-left: 15px; }
+
+        /* Chat Area */
         #msg-container { flex: 1; overflow-y: auto; padding: 15px; background: #084d6e; display: flex; flex-direction: column; }
-        .msg { max-width: 75%; padding: 8px 12px; margin: 5px 0; border-radius: 12px; font-size: 15px; }
+        .msg { max-width: 75%; padding: 8px 12px; margin: 5px 0; border-radius: 12px; font-size: 15px; position: relative; }
         .sent { align-self: flex-end; background: #effdde; }
         .received { align-self: flex-start; background: white; }
-        #input-area { padding: 10px; display: flex; align-items: center; border-top: 1px solid #ddd; gap: 10px; }
-        #settings-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10; padding: 20px; box-sizing: border-box; }
-        .profile-pic { width: 100px; height: 100px; border-radius: 50%; background: #ddd; margin: 0 auto 20px; display: block; }
-        .bottom-nav { height: 60px; display: flex; border-top: 1px solid #ddd; background: #f9f9f9; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #888; }
+
+        /* Input Area - កន្លែងដែលអ្នកចង់បាន */
+        #input-area { padding: 10px; display: flex; align-items: center; background: #fff; border-top: 1px solid #ddd; gap: 12px; }
+        #msg-input { flex: 1; border: none; outline: none; font-size: 16px; padding: 5px; }
+        
+        .action-btns { display: flex; align-items: center; gap: 15px; color: #34aadc; font-size: 22px; }
+        .voice-btn { cursor: pointer; color: #888; transition: 0.2s; }
+        .voice-btn:active { color: red; transform: scale(1.2); }
+        .emoji-btn { cursor: pointer; color: #888; }
+
+        /* Settings */
+        #settings-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; padding: 20px; box-sizing: border-box; }
+        .profile-pic { width: 120px; height: 120px; border-radius: 50%; background: #eee; margin: 20px auto; display: block; object-fit: cover; border: 2px solid #34aadc; }
+
+        /* Bottom Nav */
+        .bottom-nav { height: 65px; display: flex; border-top: 1px solid #eee; background: #fff; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #888; }
+        .nav-item i { font-size: 20px; margin-bottom: 4px; }
+        .nav-item.active { color: #34aadc; }
     </style>
 </head>
 <body>
     <div id="app-container">
         <div id="main-view" style="display: flex; flex-direction: column; height: 100%;">
-            <div class="search-container"><input type="text" class="search-bar" placeholder="Search"></div>
+            <div class="search-container">
+                <input type="text" class="search-bar" placeholder="Search">
+            </div>
+            
             <div id="msg-container"></div>
+
             <div id="input-area">
-                <span style="cursor:pointer" onclick="document.getElementById('msg-input').value+='😊'">😊</span>
-                <input type="text" id="msg-input" style="flex:1; border:none; outline:none;" placeholder="Message">
-                <span id="voice-btn" style="cursor:pointer" onmousedown="this.style.color='red'" onmouseup="this.style.color=''">🎤</span>
-                <button onclick="send()" style="border:none; background:none; color:#34aadc; font-weight:bold;">SEND</button>
+                <input type="text" id="msg-input" placeholder="Message" autocomplete="off">
+                <div class="action-btns">
+                    <span class="emoji-btn" onclick="toggleEmoji()">😊</span>
+                    <i class="fa-solid fa-microphone-lines voice-btn" id="v-icon" onmousedown="startV()" onmouseup="stopV()"></i>
+                    <i class="fa-solid fa-paper-plane" onclick="send()" style="cursor:pointer; color:#34aadc;"></i>
+                </div>
             </div>
         </div>
+
         <div id="settings-screen">
-            <h3>Settings</h3>
-            <div class="profile-pic" onclick="alert('Upload Photo')"></div>
-            <input type="text" id="set-name" placeholder="Name" style="width:100%; margin-bottom:10px;">
-            <input type="text" id="set-username" placeholder="@username" style="width:100%; margin-bottom:10px;">
-            <button onclick="toggleView('main')" style="width:100%; padding:10px; background:#34aadc; color:white; border:none;">Save</button>
+            <h2 style="text-align:center;">Settings</h2>
+            <img class="profile-pic" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" id="p-img">
+            <div style="margin-bottom:15px;">
+                <label>Name</label>
+                <input type="text" id="set-name" style="width:100%; padding:10px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <div style="margin-bottom:20px;">
+                <label>Username</label>
+                <input type="text" id="set-user" placeholder="@username" style="width:100%; padding:10px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
+            </div>
+            <button onclick="saveProfile()" style="width:100%; padding:12px; background:#34aadc; color:white; border:none; border-radius:8px; font-weight:bold;">Save Changes</button>
+            <p onclick="showView('main')" style="text-align:center; color:red; cursor:pointer; margin-top:20px;">Back to Chat</p>
         </div>
+
         <div class="bottom-nav">
-            <div class="nav-item" onclick="toggleView('main')">👤<br>Contacts</div>
-            <div class="nav-item" onclick="toggleView('main')">💬<br>Chats</div>
-            <div class="nav-item" onclick="toggleView('settings')">⚙️<br>Settings</div>
+            <div class="nav-item" onclick="showView('main')"><i class="fa-regular fa-circle-user"></i>Contacts</div>
+            <div class="nav-item active" onclick="showView('main')"><i class="fa-regular fa-comment"></i>Chats</div>
+            <div class="nav-item" onclick="showView('settings')"><i class="fa-solid fa-gear"></i>Settings</div>
         </div>
     </div>
+
     <script>
         const socket = io();
-        let myName = "User";
-        function toggleView(v) { 
-            document.getElementById('main-view').style.display = v==='main'?'flex':'none';
-            document.getElementById('settings-screen').style.display = v==='settings'?'block':'none';
+        let currentName = localStorage.getItem('chat_name') || "User";
+
+        function showView(view) {
+            document.getElementById('main-view').style.display = view === 'main' ? 'flex' : 'none';
+            document.getElementById('settings-screen').style.display = view === 'settings' ? 'block' : 'none';
         }
-        function send() {
-            const el = document.getElementById('msg-input');
-            if(el.value) {
-                const t = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                socket.emit('message', {name: myName, msg: el.value, time: t});
-                el.value = '';
+
+        function saveProfile() {
+            const newName = document.getElementById('set-name').value;
+            if(newName) {
+                currentName = newName;
+                localStorage.setItem('chat_name', newName);
+                alert("Profile Saved!");
+                showView('main');
             }
         }
-        socket.on('message', (d) => {
-            const c = document.getElementById('msg-container');
+
+        function send() {
+            const input = document.getElementById('msg-input');
+            if (input.value) {
+                const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                socket.emit('message', { name: currentName, msg: input.value, time: time });
+                input.value = '';
+            }
+        }
+
+        function toggleEmoji() {
+            document.getElementById('msg-input').value += "😊";
+        }
+
+        function startV() { document.getElementById('v-icon').style.color = "red"; }
+        function stopV() { 
+            document.getElementById('v-icon').style.color = "#888"; 
+            alert("Voice message recorded!"); 
+        }
+
+        socket.on('message', (data) => {
+            const container = document.getElementById('msg-container');
             const div = document.createElement('div');
-            div.className = `msg ${d.name === myName ? 'sent' : 'received'}`;
-            div.innerHTML = `${d.msg} <span style="font-size:10px; opacity:0.5;">${d.time}</span>`;
-            c.appendChild(div);
-            c.scrollTop = c.scrollHeight;
+            div.className = `msg ${data.name === currentName ? 'sent' : 'received'}`;
+            div.innerHTML = `${data.msg} <span style="font-size:10px; opacity:0.5; margin-left:8px;">${data.time}</span>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
         });
-        socket.emit('load_history');
+
+        window.onload = () => { socket.emit('load_history'); };
     </script>
 </body>
 </html>
