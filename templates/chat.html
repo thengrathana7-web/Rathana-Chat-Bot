@@ -1,37 +1,69 @@
 <!DOCTYPE html>
 <html>
-<head><title>Rathana Chat Room</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-<style>
-    body { background: #0e1621; color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-    #chat { flex: 1; overflow-y: auto; padding: 20px; }
-    #input-area { background: #17212b; padding: 20px; display: flex; }
-    input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #242f3d; color: white; }
-    button { margin-left: 10px; padding: 10px 20px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; }
-    .msg { margin-bottom: 10px; padding: 10px; background: #2b5278; border-radius: 10px; width: fit-content; max-width: 80%; }
-</style>
+<head>
+    <title>Rathana Chat Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #084d6e; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #login-screen { background: white; padding: 40px; border-radius: 12px; text-align: center; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        .input-box { border-bottom: 2px solid #34aadc; margin-bottom: 25px; padding: 5px; }
+        .input-box input { border: none; outline: none; width: 100%; font-size: 18px; text-align: center; }
+        .next-btn { background: #34aadc; color: white; border: none; width: 100%; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        #chat-screen { display: none; flex-direction: column; width: 100%; height: 100vh; max-width: 600px; background: #084d6e; }
+        #msg-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; }
+        .msg { max-width: 75%; padding: 10px 15px; margin: 5px 0; border-radius: 15px; font-size: 15px; position: relative; }
+        .sent { align-self: flex-end; background: #effdde; border-bottom-right-radius: 2px; }
+        .received { align-self: flex-start; background: white; border-bottom-left-radius: 2px; }
+        .time { font-size: 10px; opacity: 0.5; float: right; margin-top: 5px; margin-left: 8px; }
+        #input-area { background: #fff; padding: 12px; display: flex; align-items: center; gap: 10px; }
+        #msg-input { flex: 1; border: none; outline: none; font-size: 16px; }
+    </style>
 </head>
 <body>
-    <div id="chat"></div>
-    <div id="input-area">
-        <input type="text" id="msg" placeholder="Write a message..." autocomplete="off">
-        <button onclick="send()">SEND</button>
+    <div id="login-screen">
+        <h2 style="margin-top:0;">Rathana Chat Bot</h2>
+        <p style="color:#777; font-size:14px;">Welcome! Enter your number to start.</p>
+        <div class="input-box"><input type="text" id="user-id" placeholder="+855 --- --- ---"></div>
+        <button class="next-btn" onclick="startChat()">Next</button>
+    </div>
+    <div id="chat-screen">
+        <div id="msg-container"></div>
+        <div id="input-area">
+            <input type="text" id="msg-input" placeholder="Message" autocomplete="off">
+            <button onclick="send()" style="border:none; background:none; color:#34aadc; font-weight:bold; cursor:pointer;">SEND</button>
+        </div>
     </div>
     <script>
-        var socket = io();
-        var user = "{{ username }}";
-        function send() {
-            var m = document.getElementById('msg');
-            if(m.value) {
-                socket.emit('message', { user: user, msg: m.value });
-                m.value = '';
+        const socket = io();
+        let myId = "";
+        function startChat() {
+            myId = document.getElementById('user-id').value;
+            if (myId) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('chat-screen').style.display = 'flex';
+                socket.emit('load_history');
             }
         }
-        socket.on('message', function(data) {
-            var c = document.getElementById('chat');
-            c.innerHTML += '<div class="msg"><b>' + data.user + ':</b> ' + data.msg + '</div>';
-            c.scrollTop = c.scrollHeight;
-        });
+        function send() {
+            const input = document.getElementById('msg-input');
+            if (input.value) {
+                const now = new Date();
+                const time = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+                socket.emit('message', { name: myId, msg: input.value, time: time });
+                input.value = '';
+            }
+        }
+        socket.on('message', addMessage);
+        socket.on('history', (history) => history.forEach(addMessage));
+        function addMessage(data) {
+            const container = document.getElementById('msg-container');
+            const div = document.createElement('div');
+            div.className = `msg ${data.name === myId ? 'sent' : 'received'}`;
+            div.innerHTML = `${data.msg} <span class="time">${data.time}</span>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
     </script>
 </body>
 </html>
