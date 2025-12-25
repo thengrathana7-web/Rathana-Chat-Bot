@@ -27,10 +27,13 @@
         .status-info { font-size: 10px; opacity: 0.6; display: flex; align-items: center; justify-content: flex-end; margin-top: 4px; gap: 3px; }
         .tick-icon { color: #34aadc; font-size: 12px; }
 
-        /* Input Area */
+        /* Input Area - កន្លែងប៊ូតុងថ្មីសម្រាប់ផ្ញើរូបភាព */
         .input-area { background: white; padding: 10px 15px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #eee; }
         #msg-input { flex: 1; border: none; outline: none; font-size: 16px; padding: 10px; background: #f1f1f1; border-radius: 20px; }
         .input-icons { display: flex; gap: 15px; color: #8e8e8e; font-size: 24px; }
+
+        /* Style for sent images */
+        .chat-image { max-width: 100%; border-radius: 10px; margin-top: 5px; }
 
         /* Settings View */
         #settings-view { display: none; position: absolute; inset: 0; background: white; z-index: 100; padding: 20px; text-align: center; }
@@ -53,6 +56,8 @@
                 <div class="input-icons">
                     <span onclick="addEmoji()" style="cursor:pointer">😊</span>
                     <i class="fa-solid fa-microphone-lines" style="cursor:pointer" onclick="alert('Mic Active')"></i>
+                    <i class="fa-solid fa-image" style="cursor:pointer;" onclick="document.getElementById('image-input').click()"></i>
+                    <input type="file" id="image-input" hidden accept="image/*" onchange="sendImage(event)">
                     <i class="fa-solid fa-paper-plane" onclick="sendMsg()" style="color:#34aadc; cursor:pointer"></i>
                 </div>
             </div>
@@ -65,85 +70,4 @@
             <input type="text" id="name-in" placeholder="Full Name" style="width:80%; padding:12px; margin-bottom:15px; border:1px solid #ddd; border-radius:10px;">
             <button onclick="saveProfile()" style="width:85%; padding:14px; background:#34aadc; color:white; border:none; border-radius:10px; font-weight:bold;">Save Profile</button>
             <br>
-            <div class="logout-btn" onclick="logOut()">Log Out Account</div>
-            <p onclick="showTab('chat')" style="color:#34aadc; margin-top:20px; cursor:pointer;">Back to Chat</p>
-        </div>
-
-        <div class="nav-bar">
-            <div class="nav-item active" id="c-tab" onclick="showTab('chat')"><i class="fa-regular fa-comment" style="font-size:22px;"></i>Chats</div>
-            <div class="nav-item" id="s-tab" onclick="showTab('settings')"><i class="fa-solid fa-gear" style="font-size:22px;"></i>Settings</div>
-        </div>
-    </div>
-
-    <script>
-        const socket = io();
-        let myProfile = JSON.parse(localStorage.getItem('my_chat_profile')) || {name: 'User', photo: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'};
-
-        function showTab(t) {
-            document.getElementById('chat-view').style.display = t === 'chat' ? 'flex' : 'none';
-            document.getElementById('settings-view').style.display = t === 'settings' ? 'block' : 'none';
-            document.getElementById('c-tab').classList.toggle('active', t === 'chat');
-            document.getElementById('s-tab').classList.toggle('active', t === 'settings');
-        }
-
-        function updatePhoto(e) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                document.getElementById('set-pic').src = reader.result;
-                myProfile.photo = reader.result;
-            };
-            reader.readAsDataURL(e.target.files[0]);
-        }
-
-        function saveProfile() {
-            myProfile.name = document.getElementById('name-in').value || myProfile.name;
-            localStorage.setItem('my_chat_profile', JSON.stringify(myProfile));
-            alert("រក្សាទុកបានជោគជ័យ!");
-        }
-
-        function logOut() { if(confirm("ចាកចេញពី Browser នេះ?")) location.reload(); }
-
-        function addEmoji() { document.getElementById('msg-input').value += "😊"; }
-
-        function sendMsg() {
-            const inp = document.getElementById('msg-input');
-            if(inp.value) {
-                const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                socket.emit('message', {name: myProfile.name, msg: inp.value, time: time, photo: myProfile.photo});
-                inp.value = '';
-            }
-        }
-
-        socket.on('message', d => {
-            const container = document.getElementById('msg-container');
-            const isMe = d.name === myProfile.name;
-            
-            const wrapper = document.createElement('div');
-            wrapper.className = `msg-wrapper ${isMe ? 'wrapper-sent' : 'wrapper-received'}`;
-            
-            const img = document.createElement('img');
-            img.className = 'mini-pic';
-            img.src = d.photo || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-            
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `msg ${isMe ? 'sent' : 'received'}`;
-            
-            // បន្ថែមសញ្ញា Double Tick សម្រាប់សារដែលផ្ញើចេញ
-            const statusHtml = isMe ? `<div class="status-info">${d.time} <i class="fa-solid fa-check-double tick-icon"></i></div>` : `<div class="status-info" style="justify-content:flex-start;">${d.time}</div>`;
-            
-            msgDiv.innerHTML = `${isMe ? '' : '<b>'+d.name+'</b><br>'}${d.msg}${statusHtml}`;
-            
-            wrapper.appendChild(img);
-            wrapper.appendChild(msgDiv);
-            container.appendChild(wrapper);
-            container.scrollTop = container.scrollHeight;
-        });
-
-        window.onload = () => {
-            document.getElementById('set-pic').src = myProfile.photo;
-            document.getElementById('name-in').value = myProfile.name;
-            socket.emit('load_history');
-        };
-    </script>
-</body>
-</html>
+            <div class="logout-btn
