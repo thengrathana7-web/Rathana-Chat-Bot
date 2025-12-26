@@ -1,6 +1,6 @@
 import os
 import sqlite3
-import random  # បន្ថែមសម្រាប់បង្កើតលេខ ID
+import random
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
@@ -13,7 +13,7 @@ def get_db():
 
 def init_db():
     with get_db() as conn:
-        # បន្ថែម user_id_number ទៅក្នុង table users
+        # បង្កើត Table Users (ប្រសិនបើមិនទាន់មាន)
         conn.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -23,6 +23,7 @@ def init_db():
             user_id_number INTEGER UNIQUE, 
             profile_pic TEXT DEFAULT 'default.png'
         )''')
+        # បង្កើត Table Messages
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
@@ -32,6 +33,7 @@ def init_db():
         )''')
     print("Database initialized.")
 
+# ចាប់ផ្តើម Database នៅពេល Run App
 init_db()
 
 @app.route('/')
@@ -71,7 +73,7 @@ def login():
         session['user_id'] = user['id']
         session['user_name'] = user['name']
         session['username'] = user['username']
-        session['id_num'] = user['user_id_number'] # ទុកលេខ ID ក្នុង Session
+        session['id_num'] = user['user_id_number']
         return redirect(url_for('chat'))
     return "Email ឬ Password មិនត្រឹមត្រូវ!"
 
@@ -101,21 +103,17 @@ def chat():
     
     return render_template('chat.html', 
                            user_name=session['user_name'], 
-                           id_num=session.get('id_num'), # បញ្ជូនលេខ ID ទៅកាន់ HTML
+                           id_num=session.get('id_num'),
                            old_messages=messages,
                            chat_with_name=chat_with_name)
 
-# --- ROUTE ស្វែងរកតាមលេខ ID ---
 @app.route('/search_friend', methods=['POST'])
 def search_friend():
     if 'user_id' not in session: 
         return jsonify({"status": "error"}), 401
     
-    # ទទួលលេខ ID ពី JavaScript
     search_query = request.form.get('username', '').strip() 
-    
     db = get_db()
-    # ស្វែងរកក្នុង Column user_id_number
     user = db.execute('SELECT id, name, user_id_number FROM users WHERE user_id_number = ? AND id != ?', 
                       (search_query, session['user_id'])).fetchone()
     
@@ -144,6 +142,26 @@ def send_message():
         db.commit()
         return jsonify({"status": "sent"}), 200
     return jsonify({"status": "empty"}), 400
+
+# --- មុខងារថ្មីដែលអ្នកចង់បន្ថែម ---
+@app.route('/get_messages/<int:receiver_id>')
+def get_messages(receiver_id):
+    if 'user_id' not in session:
+        return jsonify([]), 401
+    
+    user_id = session['user_id']
+    db = get_db()
+    
+    messages = db.execute('''
+        SELECT m.*, u.name as sender_name 
+        FROM messages m 
+        JOIN users u ON m.sender_id = u.id 
+        WHERE (sender_id = ? AND receiver_id = ?) 
+           OR (sender_id = ? AND receiver_id = ?)
+        ORDER BY timestamp ASC
+    ''', (user_id, receiver_id, receiver_id, user_id)).fetchall()
+    
+    return jsonify([dict(row) for row in messages])
 
 @app.route('/settings')
 def settings():
