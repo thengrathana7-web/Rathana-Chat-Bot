@@ -1,20 +1,277 @@
 <!DOCTYPE html>
-<html>
-<head><title>Rathana Chat - Login</title>
-<style>
-    body { background: #0e1621; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .box { background: #17212b; padding: 40px; border-radius: 15px; border: 1px solid #2ecc71; text-align: center; width: 300px; }
-    input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #242f3d; color: white; box-sizing: border-box; }
-    button { width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-</style>
+
+<html lang="km">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Rathana Chat-Bot</title>
+
+    <style>
+
+        body { 
+
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+
+            background: #084d6e; 
+
+            display: flex; 
+
+            flex-direction: column;
+
+            align-items: center; 
+
+            justify-content: center; 
+
+            height: 100vh; 
+
+            margin: 0; 
+
+            color: white; 
+
+        }
+
+
+
+        .welcome-msg {
+
+            font-size: 24px;
+
+            font-weight: bold;
+
+            margin-bottom: 30px;
+
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
+
+        }
+
+
+
+        .auth-card { 
+
+            background: white; 
+
+            color: black; 
+
+            padding: 30px; 
+
+            border-radius: 20px; 
+
+            width: 320px; 
+
+            text-align: center; 
+
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+
+        }
+
+
+
+        h2 { margin-bottom: 20px; font-size: 22px; }
+
+
+
+        input, select { 
+
+            width: 100%; 
+
+            padding: 12px; 
+
+            margin: 10px 0; 
+
+            border-radius: 10px; 
+
+            border: 1px solid #ddd; 
+
+            box-sizing: border-box; 
+
+            font-size: 14px;
+
+        }
+
+
+
+        button { 
+
+            width: 100%; 
+
+            padding: 12px; 
+
+            background: #34aadc; 
+
+            border: none; 
+
+            color: white; 
+
+            border-radius: 10px; 
+
+            cursor: pointer; 
+
+            font-weight: bold; 
+
+            font-size: 16px;
+
+            margin-top: 10px;
+
+            transition: 0.3s;
+
+        }
+
+
+
+        button:hover { background: #288db8; }
+
+
+
+        .toggle { 
+
+            font-size: 13px; 
+
+            color: #34aadc; 
+
+            cursor: pointer; 
+
+            display: block; 
+
+            margin-top: 20px; 
+
+            text-decoration: none;
+
+        }
+
+
+
+        /* លាក់ Form ទី ២ ជាមុនសិន */
+
+        #step-2 { display: none; }
+
+    </style>
+
 </head>
+
 <body>
-    <div class="box">
-        <h2 style="color: #2ecc71;">RATHANA CHAT</h2>
-        <form action="/register" method="POST">
-            <input type="text" name="username" placeholder="Your Name" required>
-            <button type="submit">START CHATTING</button>
-        </form>
+
+
+
+    <div class="welcome-msg">Welcome to Rathana-Chat-Bot</div>
+
+
+
+    <div class="auth-card">
+
+        <div id="step-1">
+
+            <h2 id="title">Register</h2>
+
+            <form id="form-step-1" onsubmit="goToStep2(event)">
+
+                <input type="text" id="identifier" placeholder="Email or Phone Number" required>
+
+                <button type="submit">Continue</button>
+
+            </form>
+
+            <span class="toggle" onclick="switchToLogin()">មានគណនីរួចហើយ? Login</span>
+
+        </div>
+
+
+
+        <div id="step-2">
+
+            <h2>Complete Profile</h2>
+
+            <form id="form-step-2" action="/register" method="POST">
+
+                <input type="text" name="verify_code" placeholder="Verify Code (OTP)" required>
+
+                <input type="text" name="fullname" placeholder="Full Name" required>
+
+                
+
+                <select name="gender" required>
+
+                    <option value="" disabled selected>Select Gender</option>
+
+                    <option value="male">Male</option>
+
+                    <option value="female">Female</option>
+
+                    <option value="other">Other</option>
+
+                </select>
+
+
+
+                <input type="date" name="dob" title="Date of Birth" required>
+
+                
+
+                <button type="submit">Register</button>
+
+            </form>
+
+            <span class="toggle" onclick="backToStep1()">Back</span>
+
+        </div>
+
     </div>
+
+
+
+    <script>
+
+        function goToStep2(event) {
+
+            event.preventDefault(); // ការពារកុំឱ្យ Refresh page
+
+            document.getElementById('step-1').style.display = 'none';
+
+            document.getElementById('step-2').style.display = 'block';
+
+        }
+
+
+
+        function backToStep1() {
+
+            document.getElementById('step-2').style.display = 'none';
+
+            document.getElementById('step-1').style.display = 'block';
+
+        }
+
+
+
+        function switchToLogin() {
+
+            const title = document.getElementById('title');
+
+            const toggleText = document.querySelector('.toggle');
+
+            
+
+            if(title.innerText === 'Register') {
+
+                title.innerText = 'Login';
+
+                toggleText.innerText = 'មិនទាន់មានគណនី? ចុះឈ្មោះ';
+
+            } else {
+
+                title.innerText = 'Register';
+
+                toggleText.innerText = 'មានគណនីរួចហើយ? Login';
+
+            }
+
+        }
+
+    </script>
+
 </body>
+
 </html>
