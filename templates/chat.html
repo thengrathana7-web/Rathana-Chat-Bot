@@ -87,14 +87,39 @@
         const sendBtn = document.querySelector('.send-btn');
         const searchInput = document.getElementById('userSearch');
         const resultBox = document.getElementById('searchResult');
+        let refreshInterval = null; 
 
-        // ១. មុខងារស្វែងរកតាម ID ៦ខ្ទង់
+        // ១. មុខងារទាញយកសារ និងបង្ហាញលើអេក្រង់
+        function loadChatHistory(receiverId) {
+            fetch(`/get_messages/${receiverId}`)
+                .then(res => res.json())
+                .then(messages => {
+                    // បង្កើត HTML ថ្មីតែម្តង ដើម្បីកុំឱ្យញ័រអេក្រង់ពេល Refresh
+                    let chatHTML = "";
+                    messages.forEach(msg => {
+                        const isMe = msg.sender_id == {{ session['user_id'] }};
+                        const style = isMe 
+                            ? "background: #2b5278; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-end; max-width: 75%; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"
+                            : "background: #182533; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-start; max-width: 75%; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
+                        
+                        const time = msg.timestamp.split(' ')[1].substring(0,5);
+                        chatHTML += `<div style="${style}">${msg.message} <div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${time}</div></div>`;
+                    });
+                    
+                    // ប្រៀបធៀបបើមានសារថ្មី ចាំ Update និង Scroll
+                    if (msgBox.innerHTML !== chatHTML) {
+                        msgBox.innerHTML = chatHTML;
+                        msgBox.scrollTop = msgBox.scrollHeight;
+                    }
+                });
+        }
+
+        // ២. មុខងារស្វែងរក និងប៊ូតុង "ជជែក"
         searchInput.addEventListener('input', function() {
             let val = this.value.trim();
-            
             if (val.length === 6) {
                 let fd = new FormData();
-                fd.append('username', val); // ផ្ញើទៅ server តាម key 'username' ឬ 'query' តាមកូដ Python របស់អ្នក
+                fd.append('username', val);
 
                 fetch('/search_friend', { method: 'POST', body: fd })
                 .then(res => res.json())
@@ -112,7 +137,11 @@
                             document.getElementById('chatTitle').innerText = data.name; 
                             resultBox.style.display = 'none';
                             searchInput.value = "";
-                            msgBox.innerHTML = ""; // លាងសារចាស់ចេញដើម្បី Chat ថ្មី
+                            
+                            // ចាប់ផ្តើមទាញយកសារ និង Refresh រៀងរាល់ ៣ វិនាទី
+                            loadChatHistory(data.id);
+                            if(refreshInterval) clearInterval(refreshInterval);
+                            refreshInterval = setInterval(() => loadChatHistory(data.id), 3000);
                         };
                     } else {
                         document.getElementById('resultInfo').style.display = 'none';
@@ -124,33 +153,22 @@
             }
         });
 
-        // ២. មុខងារផ្ញើសារ (One-by-One)
+        // ៣. មុខងារផ្ញើសារ
         function sendMessage() {
             const text = msgInput.value.trim();
-            if (text !== "") {
-                if (!window.currentReceiverId) {
-                    alert("សូមស្វែងរកមិត្តភក្តិតាម ID ដើម្បីជជែក!");
-                    return;
-                }
-
+            if (text !== "" && window.currentReceiverId) {
                 fetch('/send_message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        message: text,
-                        receiver_id: window.currentReceiverId 
-                    })
+                    body: JSON.stringify({ message: text, receiver_id: window.currentReceiverId })
                 }).then(res => {
                     if (res.ok) {
-                        const msgDiv = document.createElement('div');
-                        msgDiv.style = "background: #2b5278; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-end; max-width: 75%; color: white; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
-                        msgDiv.innerHTML = text + `<div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>`;
-                        
-                        msgBox.appendChild(msgDiv);
                         msgInput.value = "";
-                        msgBox.scrollTop = msgBox.scrollHeight;
+                        loadChatHistory(window.currentReceiverId); // Update ភ្លាមៗក្រោយផ្ញើ
                     }
                 });
+            } else if (!window.currentReceiverId) {
+                alert("សូមស្វែងរកមិត្តភក្តិតាម ID ដើម្បីជជែក!");
             }
         }
 
