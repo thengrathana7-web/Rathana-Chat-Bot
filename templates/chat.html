@@ -1,212 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* រក្សា Style ដើមរបស់អ្នកទាំងអស់ */
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background: #084d6e; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        #app-container { flex: 1; display: flex; flex-direction: column; position: relative; }
-        .header-search { padding: 12px; background: #084d6e; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .search-input { width: 100%; padding: 10px 15px; border-radius: 12px; border: none; background: #063d57; color: white; outline: none; box-sizing: border-box; }
-        #msg-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; background: #084d6e; }
-        .msg-wrapper { display: flex; align-items: flex-end; margin: 8px 0; max-width: 85%; }
-        .wrapper-sent { align-self: flex-end; flex-direction: row-reverse; }
-        .wrapper-received { align-self: flex-start; }
-        .mini-pic { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin: 0 8px; background: #ccc; }
-        .msg { padding: 10px 14px; border-radius: 18px; font-size: 15px; position: relative; }
-        .sent { background: #effdde; color: black; border-bottom-right-radius: 4px; }
-        .received { background: white; color: black; border-bottom-left-radius: 4px; }
-        .status { font-size: 10px; opacity: 0.6; display: flex; align-items: center; justify-content: flex-end; margin-top: 4px; gap: 3px; }
-        .tick { color: #34aadc; font-size: 12px; }
-        .input-area { background: white; padding: 10px 15px; display: flex; align-items: center; gap: 12px; }
-        #msg-input { flex: 1; border: none; outline: none; padding: 10px; background: #f1f1f1; border-radius: 20px; font-size: 16px; }
-        .input-icons { display: flex; gap: 18px; color: #8e8e8e; font-size: 24px; }
-        .recording { color: #ff4d4d !important; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        #settings-view { display: none; position: absolute; inset: 0; background: white; z-index: 100; padding: 25px; text-align: center; }
-        #set-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #34aadc; margin: 20px auto; display: block; }
-        .logout-btn { color: #ff4d4d; border: 1px solid #ff4d4d; padding: 10px 25px; border-radius: 25px; cursor: pointer; display: inline-block; margin-top: 30px; font-weight: bold; }
-        .nav-bar { height: 65px; background: white; display: flex; border-top: 1px solid #eee; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8e8e8e; cursor: pointer; font-size: 11px; }
-        .nav-item.active { color: #34aadc; }
+        body { margin: 0; background: #0e1621; font-family: sans-serif; display: flex; height: 100vh; color: white; }
+        /* Sidebar */
+        .sidebar { width: 300px; background: #17212b; border-right: 1px solid #0e1621; display: flex; flex-direction: column; }
+        .search-box { padding: 15px; }
+        .search-box input { width: 100%; padding: 10px; border-radius: 20px; border: none; background: #242f3d; color: white; }
+        /* Chat Area */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0e1621; }
+        .chat-header { background: #17212b; padding: 15px; display: flex; align-items: center; border-bottom: 1px solid #0e1621; }
+        .messages { flex: 1; padding: 20px; overflow-y: auto; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        /* Input Area */
+        .input-area { background: #17212b; padding: 10px 20px; display: flex; align-items: center; gap: 15px; }
+        .input-area input { flex: 1; background: transparent; border: none; color: white; padding: 10px; font-size: 16px; }
+        .input-area i { color: #808b99; font-size: 20px; cursor: pointer; }
+        .send-btn { color: #2481cc !important; }
     </style>
 </head>
 <body>
-    <div id="app-container">
-        <div id="chat-view" style="display: flex; flex-direction: column; height: 100%;">
-            <div class="header-search"><input type="text" class="search-input" placeholder="ស្វែងរកសារ..."></div>
-            <div id="msg-container"></div>
-            <div class="input-area">
-                <span onclick="addEmoji()" style="cursor:pointer; font-size: 24px;">😊</span>
-                <input type="text" id="msg-input" placeholder="សរសេរសារ...">
-                <div class="input-icons">
-                    <i class="fa-solid fa-microphone" id="mic-icon" onclick="toggleVoice()" style="cursor:pointer"></i>
-                    <i class="fa-solid fa-image" onclick="document.getElementById('image-in').click()" style="cursor:pointer"></i>
-                    <input type="file" id="image-in" hidden accept="image/*" onchange="sendImg(event)">
-                    <i class="fa-solid fa-paper-plane" onclick="sendMsg()" style="color:#34aadc; cursor:pointer"></i>
-                </div>
+    <div class="sidebar">
+        <div class="search-box">
+            <input type="text" placeholder="Search Username...">
+        </div>
+        <div style="padding: 20px; color: #808b99; text-align: center;">មិនទាន់មានការសន្ទនា</div>
+    </div>
+    <div class="chat-area">
+        <div class="chat-header">
+            <div style="width: 40px; height: 40px; background: #2481cc; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-weight: bold;">R</div>
+            <div>
+                <div style="font-weight: bold;">Rathana Chat Bot</div>
+                <div style="font-size: 12px; color: #2481cc;">online</div>
             </div>
         </div>
-
-        <div id="settings-view">
-            <h2>ការកំណត់ Profile</h2>
-            <img id="set-img" src="{{ photo }}" alt="Profile">
-            <p>ឈ្មោះអ្នកប្រើ៖ <b>{{ name }}</b> (@{{ username }})</p>
-            <div class="logout-btn" onclick="window.location.href='/logout'">ចាកចេញពីគណនី (Logout)</div>
-            <p onclick="showTab('chat')" style="color:#34aadc; cursor:pointer; margin-top:20px;">ត្រឡប់ទៅផ្ទាំងឆាតវិញ</p>
-        </div>
-
-        <div class="nav-bar">
-            <div class="nav-item active" id="chat-tab" onclick="showTab('chat')">
-                <i class="fa-regular fa-comment" style="font-size:24px;"></i>ឆាត
-            </div>
-            <div class="nav-item" id="set-tab" onclick="showTab('settings')">
-                <i class="fa-solid fa-gear" style="font-size:24px;"></i>កំណត់
-            </div>
+        <div class="messages"></div>
+        <div class="input-area">
+            <i class="far fa-smile"></i>
+            <input type="text" placeholder="Message">
+            <i class="fas fa-paperclip"></i>
+            <i class="fas fa-paper-plane send-btn"></i>
         </div>
     </div>
-
-    <script>
-        const socket = io();
-        let mediaRecorder, audioChunks = [], isRecording = false;
-        let currentRoom = "main_room"; // បន្ទប់រួម
-
-        // ទាញយកព័ត៌មានពី Server Session ដែលបាន Login
-        const userProfile = {
-            name: "{{ name }}",
-            username: "{{ username }}",
-            photo: "{{ photo }}"
-        };
-
-        // ចូលទៅកាន់ Room ដើម្បីទាញយកប្រវត្តិសារចាស់ៗ
-        socket.emit('join', { room: currentRoom });
-
-        // មុខងារប្តូរ Tab (Chat / Settings)
-        function showTab(t) {
-            document.getElementById('chat-view').style.display = t === 'chat' ? 'flex' : 'none';
-            document.getElementById('settings-view').style.display = t === 'settings' ? 'block' : 'none';
-            document.getElementById('chat-tab').classList.toggle('active', t === 'chat');
-            document.getElementById('set-tab').classList.toggle('active', t === 'settings');
-        }
-
-        // មុខងារ Emoji
-        function addEmoji() { 
-            document.getElementById('msg-input').value += "😊"; 
-            document.getElementById('msg-input').focus();
-        }
-
-        // មុខងារផ្ញើសារអក្សរ
-        function sendMsg() {
-            const inp = document.getElementById('msg-input');
-            if(inp.value.trim()) {
-                const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                socket.emit('message', { 
-                    room: currentRoom, 
-                    name: userProfile.name, 
-                    msg: inp.value, 
-                    time: time, 
-                    photo: userProfile.photo 
-                });
-                inp.value = '';
-            }
-        }
-
-        // មុខងារផ្ញើរូបភាព
-        function sendImg(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                const imgHtml = `<img src="${reader.result}" style="max-width:220px; border-radius:12px; display:block; margin-top:5px;">`;
-                socket.emit('message', { 
-                    room: currentRoom, 
-                    name: userProfile.name, 
-                    msg: imgHtml, 
-                    time: time, 
-                    photo: userProfile.photo 
-                });
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // មុខងារផ្ញើសំឡេង
-        async function toggleVoice() {
-            const micIcon = document.getElementById('mic-icon');
-            if (!isRecording) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                            const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                            const audioHtml = `<audio controls src="${reader.result}" style="width:200px; height:40px;"></audio>`;
-                            socket.emit('message', { 
-                                room: currentRoom, 
-                                name: userProfile.name, 
-                                msg: audioHtml, 
-                                time: time, 
-                                photo: userProfile.photo 
-                            });
-                        };
-                        reader.readAsDataURL(audioBlob);
-                        audioChunks = [];
-                    };
-                    mediaRecorder.start();
-                    isRecording = true;
-                    micIcon.classList.add('recording');
-                } catch(e) {
-                    alert("សូមអនុញ្ញាតឱ្យប្រើ Microphone ជាមុនសិន!");
-                }
-            } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                micIcon.classList.remove('recording');
-            }
-        }
-
-        // ទទួលសារពី Server (ទាំងសារថ្មី និងប្រវត្តិសារចាស់)
-        socket.on('message', d => {
-            const container = document.getElementById('msg-container');
-            const isMe = d.name === userProfile.name;
-            
-            const wrap = document.createElement('div');
-            wrap.className = `msg-wrapper ${isMe ? 'wrapper-sent' : 'wrapper-received'}`;
-            
-            const pic = document.createElement('img');
-            pic.className = 'mini-pic';
-            pic.src = d.photo || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-            
-            const mDiv = document.createElement('div');
-            mDiv.className = `msg ${isMe ? 'sent' : 'received'}`;
-            
-            const status = isMe ? 
-                `<div class="status">${d.time} <i class="fa-solid fa-check-double tick"></i></div>` : 
-                `<div class="status">${d.time}</div>`;
-            
-            mDiv.innerHTML = `${isMe ? '' : '<b>'+d.name+'</b><br>'}${d.msg}${status}`;
-            
-            wrap.appendChild(pic);
-            wrap.appendChild(mDiv);
-            container.appendChild(wrap);
-            
-            // រមៀលទៅក្រោមបំផុតរាល់ពេលមានសារថ្មី
-            container.scrollTop = container.scrollHeight;
-        });
-
-        // អនុញ្ញាតឱ្យផ្ញើសារដោយចុច Enter
-        document.getElementById('msg-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                sendMsg();
-            }
-        });
-    </script>
 </body>
 </html>
