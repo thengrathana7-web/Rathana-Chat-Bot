@@ -11,26 +11,18 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             height: 100vh; margin: 0; color: white; 
         }
-
         .welcome-msg { 
             font-size: 24px; font-weight: bold; margin-bottom: 25px; text-align: center;
             white-space: nowrap; width: 100%; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
-
         .auth-card { 
             background: white; color: #333; padding: 30px; border-radius: 24px; 
             width: 320px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
         }
-
         h2 { margin-top: 0; color: #084d6e; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
-        
-        button { 
-            width: 100%; padding: 12px; background: #34aadc; border: none; color: white; 
-            border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px;
-        }
+        button { width: 100%; padding: 12px; background: #34aadc; border: none; color: white; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:disabled { background: #ccc; cursor: not-allowed; }
-
         .toggle { font-size: 13px; color: #34aadc; cursor: pointer; display: block; margin-top: 15px; }
         #register-step-1, #register-step-2 { display: none; }
     </style>
@@ -84,16 +76,20 @@
             document.getElementById('register-step-1').style.display = 'block';
             document.getElementById('register-step-2').style.display = 'none';
         }
+
         function showLogin() {
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('register-step-1').style.display = 'none';
             document.getElementById('register-step-2').style.display = 'none';
         }
+
         async function sendOTP(event) {
             event.preventDefault();
             const email = document.getElementById('identifier').value;
             const btn = document.getElementById('continue-btn');
-            btn.innerText = "កំពុងផ្ញើ..."; btn.disabled = true;
+
+            btn.innerText = "កំពុងផ្ញើ...";
+            btn.disabled = true;
 
             try {
                 const response = await fetch('/send-otp', {
@@ -101,18 +97,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email })
                 });
+
                 const data = await response.json();
+
                 if (data.success) {
                     document.getElementById('hidden-email').value = email;
                     document.getElementById('register-step-1').style.display = 'none';
                     document.getElementById('register-step-2').style.display = 'block';
                 } else {
-                    alert("Error: " + data.error);
-                    btn.innerText = "បន្តទៅមុខ"; btn.disabled = false;
+                    alert("Error: " + (data.error || "បញ្ហាបញ្ជូនលេខកូដ"));
+                    btn.innerText = "បន្តទៅមុខ";
+                    btn.disabled = false;
                 }
-            } catch (e) {
-                alert("មិនអាចភ្ជាប់ទៅកាន់ Server បានទេ។ សូមពិនិត្យមើល App.py លើ Render!");
-                btn.innerText = "បន្តទៅមុខ"; btn.disabled = false;
+            } catch (error) {
+                alert("Error: មិនអាចភ្ជាប់ទៅកាន់ Server បានទេ។ សូមពិនិត្យមើល App.py លើ Render!");
+                btn.innerText = "បន្តទៅមុខ";
+                btn.disabled = false;
             }
         }
     </script>
