@@ -6,12 +6,10 @@ app = Flask(__name__)
 app.secret_key = 'rathana_secret_key'
 
 def get_db():
-    # ប្រើផ្លូវទៅកាន់ database.db
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-# បង្កើត Table (រក្សាទុក Table ចាស់ និងបន្ថែមការកំណត់ខ្លះៗ)
 def init_db():
     with get_db() as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -32,6 +30,8 @@ def init_db():
     print("Database initialized.")
 
 init_db()
+
+# --- ROUTES ដើម ---
 
 @app.route('/')
 def welcome():
@@ -74,7 +74,6 @@ def chat():
     if 'user_id' not in session:
         return redirect(url_for('welcome'))
     
-    # ទាញយកសារចាស់ៗមកបង្ហាញ (Load Messages)
     db = get_db()
     messages = db.execute('''
         SELECT m.*, u.name as sender_name 
@@ -85,7 +84,6 @@ def chat():
     
     return render_template('chat.html', user_name=session['user_name'], old_messages=messages)
 
-# --- មុខងារថ្មី៖ ផ្ញើសារ និងរក្សាទុកក្នុង Database ---
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if 'user_id' not in session:
@@ -102,7 +100,6 @@ def send_message():
         return jsonify({"status": "sent"}), 200
     return jsonify({"status": "empty"}), 400
 
-# មុខងារស្វែងរកតាម Username (រក្សាទុកដដែល)
 @app.route('/search', methods=['POST'])
 def search_user():
     username = request.form.get('username')
@@ -111,6 +108,29 @@ def search_user():
     if user:
         return jsonify({"status": "found", "name": user['name'], "username": user['username']})
     return jsonify({"status": "not_found"})
+
+# --- ROUTES ថ្មី (Settings & Update Profile) ---
+
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        return redirect(url_for('welcome'))
+    return render_template('settings.html', user_name=session['user_name'], username=session['username'])
+
+@app.route('/update_profile', methods=['POST'])
+def update_profile():
+    if 'user_id' not in session:
+        return redirect(url_for('welcome'))
+    
+    new_name = request.form.get('name')
+    user_id = session['user_id']
+    
+    db = get_db()
+    db.execute('UPDATE users SET name = ? WHERE id = ?', (new_name, user_id))
+    db.commit()
+    
+    session['user_name'] = new_name # Update ឈ្មោះក្នុង session ភ្លាមៗ
+    return redirect(url_for('chat'))
 
 @app.route('/logout')
 def logout():
