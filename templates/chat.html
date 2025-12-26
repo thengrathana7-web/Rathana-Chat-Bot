@@ -12,8 +12,10 @@
             border-bottom: 1px solid #0e1621;
             position: relative;
         }
+
+        /* បន្ថែមសម្រាប់បង្ហាញឈ្មោះមិត្តភក្តិពេលចុច Chat */
+        .header-left { display: flex; align-items: center; gap: 10px; flex: 1; }
         
-        /* កែសម្រួល search-container ឱ្យមាន position relative សម្រាប់បង្ហាញលទ្ធផល */
         .search-container { flex: 1; display: flex; justify-content: center; padding: 0 10px; position: relative; }
         .search-container input { 
             width: 100%; max-width: 200px; padding: 8px 15px; 
@@ -37,12 +39,17 @@
             padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; 
         }
         
-        .profile-icon { width: 35px; height: 35px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; text-decoration: none; color: white; }
+        .profile-icon { width: 35px; height: 35px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; text-decoration: none; color: white; flex-shrink: 0; }
     </style>
 </head>
 <body>
     <div class="chat-header">
-        <a href="/settings" class="profile-icon">{{ user_name[0] | upper }}</a>
+        <div class="header-left">
+            <a href="/settings" class="profile-icon">{{ user_name[0] | upper }}</a>
+            <div style="font-weight: bold; color: white; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ user_name }}
+            </div>
+        </div>
         
         <div class="search-container">
             <input type="text" id="userSearch" placeholder="ស្វែងរក Username..." autocomplete="off">
@@ -90,11 +97,13 @@
         const sendBtn = document.querySelector('.send-btn');
         const userSearch = document.getElementById('userSearch');
         const searchResult = document.getElementById('searchResult');
+        const resultContent = document.getElementById('resultContent');
+        const noResult = document.getElementById('noResult');
 
-        // --- មុខងារស្វែងរកមិត្តភក្តិ (Live Search) ---
+        // --- មុខងារស្វែងរកមិត្តភក្តិ (ថ្មី) ---
         userSearch.addEventListener('input', function() {
             const query = this.value.trim();
-            if (query.length > 0) {
+            if (query.length > 2) { 
                 const formData = new FormData();
                 formData.append('username', query);
 
@@ -106,14 +115,22 @@
                 .then(data => {
                     searchResult.style.display = 'block';
                     if (data.status === "found") {
-                        document.getElementById('resultContent').style.display = 'flex';
-                        document.getElementById('noResult').style.display = 'none';
+                        resultContent.style.display = 'flex';
+                        noResult.style.display = 'none';
                         document.getElementById('resName').innerText = data.name;
                         document.getElementById('resUser').innerText = '@' + data.username;
                         document.getElementById('resAvatar').innerText = data.name[0].toUpperCase();
+                        
+                        document.getElementById('startChatBtn').onclick = function() {
+                            // ប្តូរចំណងជើង Chat ទៅជាឈ្មោះមិត្តភក្តិ
+                            const headerTitle = document.querySelector('.header-left div[style*="font-weight: bold"]');
+                            if(headerTitle) headerTitle.innerText = data.name;
+                            searchResult.style.display = 'none';
+                            userSearch.value = "";
+                        };
                     } else {
-                        document.getElementById('resultContent').style.display = 'none';
-                        document.getElementById('noResult').style.display = 'block';
+                        resultContent.style.display = 'none';
+                        noResult.style.display = 'block';
                     }
                 });
             } else {
@@ -121,14 +138,13 @@
             }
         });
 
-        // បិទផ្ទាំង Search ពេលចុចខាងក្រៅ
         document.addEventListener('click', function(e) {
             if (!userSearch.contains(e.target) && !searchResult.contains(e.target)) {
                 searchResult.style.display = 'none';
             }
         });
 
-        // --- មុខងារផ្ញើសារ (Update ឱ្យទៅរក្សាទុកក្នុង Database) ---
+        // --- មុខងារផ្ញើសារ (រក្សាទុកដដែល) ---
         function sendMessage() {
             const text = msgInput.value.trim();
             if (text !== "") {
@@ -152,7 +168,6 @@
         sendBtn.addEventListener('click', sendMessage);
         msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-        // Scroll ទៅក្រោមបង្អស់ពេល Load ទំព័រ
         msgBox.scrollTop = msgBox.scrollHeight;
     </script>
 </body>
