@@ -1,28 +1,31 @@
 <!DOCTYPE html>
 <html lang="km">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rathana Chat-Bot | ចូលប្រើប្រាស់</title>
     <style>
         /* រចនាប័ទ្មរួម (Global Styles) */
         body { 
-      <body>
-
-    <div class="welcome-msg">
-        Welcome to<br>Rathana-Chat-Bot
-    </div>
-
-    <div class="auth-card">
-        </div>
-
-</body>
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #084d6e 0%, #0a6b9a 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            color: white; 
         }
 
+        /* កែសម្រួលអក្សរ Welcome ឱ្យនៅតែមួយបន្ទាត់ចំកណ្តាល */
         .welcome-msg { 
-            font-size: 28px; 
+            font-size: 24px; 
             font-weight: bold; 
             margin-bottom: 25px; 
+            text-align: center;
+            white-space: nowrap; /* បង្ខំឱ្យនៅមួយបន្ទាត់ */
+            width: 100%;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
@@ -31,7 +34,7 @@
             background: white; 
             color: #333; 
             padding: 35px; 
-            border-radius: 20px; 
+            border-radius: 24px; 
             width: 350px; 
             text-align: center; 
             box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
@@ -39,7 +42,7 @@
 
         h2 { margin-top: 0; color: #084d6e; margin-bottom: 20px; font-size: 24px; }
 
-        /* ការកំណត់ Input និង Button */
+        /* ការកំណត់ Input, Select និង Button */
         input, select { 
             width: 100%; 
             padding: 14px; 
@@ -88,8 +91,6 @@
 
         /* លាក់ Form តាមដំណាក់កាល */
         #register-step-1, #register-step-2 { display: none; }
-        
-        .error-msg { color: #e74c3c; font-size: 13px; margin-top: 5px; display: none; }
     </style>
 </head>
 <body>
@@ -122,7 +123,6 @@
             <h2>ផ្ទៀងផ្ទាត់គណនី</h2>
             <form action="/register" method="POST">
                 <input type="hidden" name="identifier" id="hidden-email">
-                
                 <input type="text" name="verify_code" placeholder="លេខកូដ OTP ៦ ខ្ទង់" required maxlength="6">
                 <input type="text" name="fullname" placeholder="ឈ្មោះពេញរបស់អ្នក" required>
                 
@@ -144,7 +144,6 @@
     </div>
 
     <script>
-        // មុខងារប្តូរផ្ទាំងបង្ហាញ (Toggle Sections)
         function showRegisterStep1() {
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('register-step-2').style.display = 'none';
@@ -157,13 +156,10 @@
             document.getElementById('login-section').style.display = 'block';
         }
 
-        // មុខងារផ្ញើ OTP ទៅកាន់ Email (Step 1)
         async function sendOTP(event) {
             event.preventDefault();
             const email = document.getElementById('identifier').value;
             const btn = document.getElementById('continue-btn');
-            
-            // បង្ហាញស្ថានភាពកំពុងផ្ញើ
             btn.innerText = "កំពុងផ្ញើលេខកូដ...";
             btn.disabled = true;
 
@@ -173,11 +169,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email })
                 });
-
                 const data = await response.json();
-                
                 if (data.success) {
-                    // បើជោគជ័យ៖ រក្សាទុក email ក្នុង input hidden រួចប្តូរទៅ step 2
                     document.getElementById('hidden-email').value = email;
                     document.getElementById('register-step-1').style.display = 'none';
                     document.getElementById('register-step-2').style.display = 'block';
