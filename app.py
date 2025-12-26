@@ -1,17 +1,28 @@
 import os
 import sqlite3
-from flask import Flask, render_template, request, session, redirect, url_for
+import random
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit, join_room
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'rathana_secure_123'
+
+# --- កំណត់ការផ្ញើ Email (ត្រូវប្តូរព័ត៌មានខាងក្រោមដើម្បីឱ្យដើរ) ---
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'your-email@gmail.com' # ដាក់ Email របស់អ្នក
+app.config['MAIL_PASSWORD'] = 'your-app-password'   # ដាក់ App Password ១៦ ខ្ង់ពី Google
+mail = Mail(app)
+
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# កែសម្រួលការបង្កើត Database ដើម្បីថែម Column ថ្មី
+# បង្កើត Database និង Table
 def init_db():
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
-    # បន្ថែម gender និង dob ក្នុង table users
+    # Table users ដែលមាន ៦ columns: username, password, name, photo, gender, dob
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (username TEXT PRIMARY KEY, password TEXT, name TEXT, photo TEXT, gender TEXT, dob TEXT)''')
     c.execute('CREATE TABLE IF NOT EXISTS messages (room TEXT, sender TEXT, msg TEXT, photo TEXT, time TEXT)')
@@ -26,36 +37,55 @@ def index():
         return render_template('chat.html', username=session['username'], name=session['name'], photo=session['photo'])
     return render_template('login.html')
 
-# មុខងារ Register ថ្មីដែលទទួលទិន្នន័យពី Step 2
+# --- មុខងារថ្មី៖ ផ្ញើ OTP ទៅកាន់ Email ---
+@app.route('/send-otp', methods=['POST'])
+def send_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = str(random.randint(100000, 999999))
+    session['otp'] = otp  # រក្សាទុកក្នុង session បណ្តោះអាសន្ន
+    
+    try:
+        msg = Message('Verify Code - Rathana Chat', sender=app.config['MAIL_USERNAME'], recipients=[email])
+        msg.body = f"លេខកូដផ្ទៀងផ្ទាត់គណនីរបស់អ្នកគឺ: {otp}"
+        mail.send(msg)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+# --- មុខងារ Register ថ្មី៖ ផ្ទៀងផ្ទាត់ OTP និងរក្សាទុកទិន្នន័យ ---
 @app.route('/register', methods=['POST'])
 def register():
-    # ទទួលទិន្នន័យពី Form ថ្មីរបស់អ្នក
-    username = request.form.get('identifier') # នេះជា Email ឬ លេខទូរស័ព្ទ (Step 1)
-    name = request.form.get('fullname')      # ឈ្មោះពេញ (Step 2)
-    gender = request.form.get('gender')      # ភេទ (Step 2)
-    dob = request.form.get('dob')            # ថ្ងៃកំណើត (Step 2)
+    username = request.form.get('identifier') # នេះជា Email (Step 1)
+    user_otp = request.form.get('verify_code') # លេខកូដដែលអ្នកប្រើបញ្ចូល
+    name = request.form.get('fullname')
+    gender = request.form.get('gender')
+    dob = request.form.get('dob')
     
-    # ចំណាំ៖ ដោយសារអ្នកមិនទាន់មានកន្លែងបញ្ចូល Password ថ្មី 
-    # ខ្ញុំកំណត់ Password បណ្តោះអាសន្ន ឬអ្នកអាចថែម input password ក្នុង Form step 2 បាន
-    password = "default_password" 
+    # ផ្ទៀងផ្ទាត់លេខកូដ OTP
+    if not session.get('otp') or user_otp != session.get('otp'):
+        return "លេខកូដ OTP មិនត្រឹមត្រូវ ឬហួសសុពលភាព!"
+
+    password = "default_password" # អ្នកអាចបន្ថែម input password ក្នុង HTML បាន
     photo = "https://cdn-icons-png.flaticon.com/512/149/149071.png"
 
     try:
         conn = sqlite3.connect('chat.db')
         c = conn.cursor()
-        # បញ្ចូលទិន្នន័យទៅក្នុង Table users ដែលមាន ៦ columns
         c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)", 
                   (username, password, name, photo, gender, dob))
         conn.commit()
         conn.close()
         
-        # បន្ទាប់ពី Register រួច ឱ្យវា Login ចូលតែម្តង
+        # សម្អាត OTP ចោល រួច Login ចូលតែម្តង
+        session.pop('otp', None)
         session['username'], session['name'], session['photo'] = username, name, photo
         return redirect(url_for('index'))
     except Exception as e:
         print(e)
-        return "មានបញ្ហាក្នុងការចុះឈ្មោះ ឬឈ្មោះនេះមានគេប្រើរួចហើយ!"
+        return "ឈ្មោះនេះមានគេប្រើរួចហើយ ឬមានបញ្ហាបច្ចេកទេស!"
 
+# --- មុខងារ Login ចាស់ ---
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username')
@@ -66,10 +96,9 @@ def login():
     user = c.fetchone()
     conn.close()
     if user:
-        # user[0]=username, user[2]=name, user[3]=photo
         session['username'], session['name'], session['photo'] = user[0], user[2], user[3]
         return redirect(url_for('index'))
-    return "ខុសលេខសម្ងាត់!"
+    return "ខុសលេខសម្ងាត់ ឬឈ្មោះអ្នកប្រើ!"
 
 @app.route('/logout')
 def logout():
@@ -77,10 +106,9 @@ def logout():
     return redirect(url_for('index'))
 
 # --- រក្សាមុខងារ SocketIO ដូចដើម ---
-
 @socketio.on('join')
 def on_join(data):
-    room = data['room']
+    room = data.get('room', 'main')
     join_room(room)
     conn = sqlite3.connect('chat.db')
     c = conn.cursor()
