@@ -15,30 +15,41 @@
         label { color: #2481cc; font-size: 13px; font-weight: bold; margin-left: 5px; }
         input { width: 100%; padding: 12px; margin: 5px 0 15px; border-radius: 10px; border: none; background: #242f3d; color: white; box-sizing: border-box; outline: none; }
         
-        .btn-save { width: 100%; padding: 13px; background: #2481cc; border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-save { width: 100%; padding: 13px; background: #2481cc; border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-logout { display: block; text-align: center; color: #ef5350; text-decoration: none; margin-top: 25px; font-weight: bold; }
+        
+        /* Style បន្ថែមសម្រាប់លេខ ID */
+        .id-badge { background: #242f3d; color: #2481cc; padding: 5px 15px; border-radius: 20px; display: inline-block; font-weight: bold; margin-bottom: 15px; border: 1px solid #2481cc; }
     </style>
 </head>
 <body>
     <div class="header">
         <a href="/chat" class="back-btn"><i class="fas fa-arrow-left"></i></a>
-        <h2 style="margin: 0; font-size: 20px;">Settings</h2>
+        <h2 style="margin: 0; font-size: 20px;">ការកំណត់ (Settings)</h2>
     </div>
 
     <div class="profile-card">
         <div class="avatar">{{ user_name[0] | upper }}</div>
+        
+        <h3 style="margin: 10px 0 5px;">{{ user_name }}</h3>
+        <div class="id-badge">ID: {{ id_num }}</div>
+        <p style="color: #808b99; font-size: 13px; margin-top: 0;">@{{ username }}</p>
+
         <form action="/update_profile" method="POST">
             <div class="info-group">
-                <label>Name</label>
-                <input type="text" name="name" value="{{ user_name }}" required>
+                <label>ឈ្មោះបង្ហាញ (Name)</label>
+                <input type="text" name="name" value="{{ user_name }}" required placeholder="បញ្ចូលឈ្មោះថ្មី...">
+                
+                <label>លេខសម្គាល់ ID (សម្រាប់ស្វែងរក)</label>
+                <input type="text" value="{{ id_num }}" disabled style="opacity: 0.8; color: #2481cc; font-weight: bold;">
                 
                 <label>Username (មិនអាចប្តូរបាន)</label>
                 <input type="text" value="@{{ username }}" disabled style="opacity: 0.6;">
             </div>
-            <button type="submit" class="btn-save">Save Changes</button>
+            <button type="submit" class="btn-save">រក្សាទុកការផ្លាស់ប្តូរ</button>
         </form>
     </div>
 
-    <a href="/logout" class="btn-logout">Logout</a>
+    <a href="/logout" class="btn-logout">ចាកចេញពីគណនី (Logout)</a>
 </body>
 </html>
