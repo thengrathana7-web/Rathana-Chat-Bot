@@ -3,9 +3,8 @@ import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
-app.secret_key = 'rathana_secret_key' # សម្រាប់ការពារ Session
+app.secret_key = 'rathana_secret_key'
 
-# មុខងារបង្កើត Database និង Table សម្រាប់ទុកព័ត៌មានសមាជិក
 def init_db():
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
@@ -27,7 +26,8 @@ init_db()
 @app.route('/')
 def home():
     if 'user_id' in session:
-        return render_template('profile.html', user=session['user_name'])
+        # កែសម្រួលឱ្យផ្ញើទាំង user_name និង email ទៅកាន់ profile.html
+        return render_template('profile.html', user_name=session['user_name'], email=session.get('user_email', ''))
     return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -36,8 +36,8 @@ def register():
         email = request.form['email']
         password = request.form['password']
         name = request.form['name']
-        gender = request.form['gender']
-        age = request.form['age']
+        gender = request.form.get('gender')
+        age = request.form.get('age')
 
         try:
             conn = sqlite3.connect('users.db')
@@ -65,7 +65,8 @@ def login():
 
         if user:
             session['user_id'] = user[0]
-            session['user_name'] = user[3]
+            session['user_email'] = user[1] # រក្សាទុក Email ក្នុង Session
+            session['user_name'] = user[3]  # រក្សាទុក ឈ្មោះ ក្នុង Session
             return redirect(url_for('home'))
         else:
             return "Email ឬ Password មិនត្រឹមត្រូវ!"
@@ -77,4 +78,6 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # បន្ថែម Port សម្រាប់ Render
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
