@@ -5,57 +5,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { margin: 0; background: #0e1621; font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* Header */
-        .chat-header { 
-            background: #17212b; padding: 10px 15px; 
-            display: flex; align-items: center; gap: 10px;
-            border-bottom: 1px solid #0e1621; color: white;
-        }
-        
+        .chat-header { background: #17212b; padding: 10px 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #0e1621; color: white; }
         .search-container { flex: 1; position: relative; }
-        .search-container input { 
-            width: 100%; padding: 8px 15px; 
-            border-radius: 20px; border: none; background: #242f3d; color: white; outline: none; font-size: 14px; box-sizing: border-box;
-        }
-
-        #searchResult {
-            position: absolute; top: 45px; left: 0; right: 0;
-            background: #17212b; border-radius: 10px; padding: 10px;
-            display: none; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
+        .search-container input { width: 100%; padding: 8px 15px; border-radius: 20px; border: none; background: #242f3d; color: white; outline: none; font-size: 14px; box-sizing: border-box; }
+        #searchResult { position: absolute; top: 45px; left: 0; right: 0; background: #17212b; border-radius: 10px; padding: 10px; display: none; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .result-item { display: flex; align-items: center; gap: 10px; padding: 10px; cursor: pointer; border-radius: 8px; }
-        .result-item:hover { background: #242f3d; }
         .res-avatar { width: 40px; height: 40px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-
-        /* Contact List Bar */
-        #contactList { 
-            display: flex; overflow-x: auto; background: #17212b; 
-            padding: 10px; gap: 15px; border-bottom: 1px solid #0e1621; 
-            white-space: nowrap; scrollbar-width: none; /* លាក់ scrollbar លើ Firefox */
-        }
-        #contactList::-webkit-scrollbar { display: none; } /* លាក់ scrollbar លើ Chrome/Safari */
-        
+        #contactList { display: flex; overflow-x: auto; background: #17212b; padding: 10px; gap: 15px; border-bottom: 1px solid #0e1621; white-space: nowrap; scrollbar-width: none; }
+        #contactList::-webkit-scrollbar { display: none; }
         .contact-item { text-align: center; cursor: pointer; min-width: 50px; }
-        .contact-avatar { width: 45px; height: 45px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; margin-bottom: 5px; }
-
-        /* Message Area */
-        .messages { 
-            flex: 1; padding: 15px; overflow-y: auto; 
-            display: flex; flex-direction: column;
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-            background-size: cover; -webkit-overflow-scrolling: touch;
-        }
-
-        .input-area { 
-            background: #17212b; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
-            display: flex; align-items: center; gap: 10px; 
-        }
-        .input-area input { 
-            flex: 1; background: #242f3d; border: none; color: white; 
-            padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; 
-        }
-        
+        .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; -webkit-overflow-scrolling: touch; }
+        .input-area { background: #17212b; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; }
+        .input-area input { flex: 1; background: #242f3d; border: none; color: white; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; }
         .profile-icon { width: 35px; height: 35px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; text-decoration: none; color: white; flex-shrink: 0; }
     </style>
 </head>
@@ -79,12 +40,7 @@
         <div id="chatTitle" style="font-size: 13px; color: #2481cc; font-weight: bold;">Global</div>
     </div>
 
-    <div id="contactList">
-        <div class="contact-item" onclick="location.reload()">
-            <div class="contact-avatar">G</div>
-            <div style="font-size: 10px; color: white;">Global</div>
-        </div>
-        </div>
+    <div id="contactList"></div>
 
     <div class="messages" id="msgBox"></div>
 
@@ -101,32 +57,34 @@
         const searchInput = document.getElementById('userSearch');
         const resultBox = document.getElementById('searchResult');
         const contactList = document.getElementById('contactList');
-        let refreshInterval = null; 
+        
+        let contacts = JSON.parse(localStorage.getItem('chat_contacts')) || [];
+        let currentSearchResult = null;
+        let refreshInterval = null;
 
-        // មុខងារទាញយកសារ
-        function loadChatHistory(receiverId) {
-            fetch(`/get_messages/${receiverId}`)
-                .then(res => res.json())
-                .then(messages => {
-                    let chatHTML = "";
-                    messages.forEach(msg => {
-                        const isMe = msg.sender_id == {{ session['user_id'] }};
-                        const style = isMe 
-                            ? "background: #2b5278; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-end; max-width: 75%; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"
-                            : "background: #182533; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-start; max-width: 75%; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
-                        
-                        const time = msg.timestamp.split(' ')[1].substring(0,5);
-                        chatHTML += `<div style="${style}">${msg.message} <div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${time}</div></div>`;
-                    });
-                    
-                    if (msgBox.innerHTML !== chatHTML) {
-                        msgBox.innerHTML = chatHTML;
-                        msgBox.scrollTop = msgBox.scrollHeight;
-                    }
-                });
+        // ១. បង្ហាញបញ្ជីមិត្តភក្តិឡើងវិញពេលបើក App
+        function renderContacts() {
+            contactList.innerHTML = `
+                <div class="contact-item" id="global-btn" onclick="location.reload()" style="text-align: center; cursor: pointer; min-width: 50px;">
+                    <div style="width: 45px; height: 45px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">G</div>
+                    <div style="font-size: 10px; color: white; margin-top: 5px;">Global</div>
+                </div>
+            `;
+
+            contacts.forEach(c => {
+                const contactDiv = document.createElement('div');
+                contactDiv.className = "contact-item";
+                contactDiv.style = "text-align: center; cursor: pointer; min-width: 50px;";
+                contactDiv.onclick = () => startPrivateChat(c.id, c.name);
+                contactDiv.innerHTML = `
+                    <div style="width: 45px; height: 45px; background: #1c2938; border: 1px solid #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">${c.name[0].toUpperCase()}</div>
+                    <div style="font-size: 10px; color: white; margin-top: 5px;">${c.name.split(' ')[0]}</div>
+                `;
+                contactList.appendChild(contactDiv);
+            });
         }
 
-        // មុខងារស្វែងរក និងបន្ថែមទៅរបារមិត្តភក្តិ
+        // ២. មុខងារស្វែងរកមិត្តភក្តិ
         searchInput.addEventListener('input', function() {
             let val = this.value.trim();
             if (val.length === 6) {
@@ -137,17 +95,12 @@
                 .then(data => {
                     resultBox.style.display = 'block';
                     if (data.status === "found") {
+                        currentSearchResult = data;
                         document.getElementById('resultInfo').style.display = 'flex';
                         document.getElementById('noResult').style.display = 'none';
                         document.getElementById('resName').innerText = data.name;
                         document.getElementById('resUser').innerText = 'ID: ' + data.id_num;
                         document.getElementById('resAvatar').innerText = data.name[0].toUpperCase();
-                        
-                        document.getElementById('addContactBtn').onclick = function() {
-                            startChatting(data.id, data.name);
-                            resultBox.style.display = 'none';
-                            searchInput.value = "";
-                        };
                     } else {
                         document.getElementById('resultInfo').style.display = 'none';
                         document.getElementById('noResult').style.display = 'block';
@@ -156,26 +109,49 @@
             } else { resultBox.style.display = 'none'; }
         });
 
-        // មុខងារចាប់ផ្តើម Chat និងបន្ថែមឈ្មោះទៅ Contact List
-        function startChatting(id, name) {
+        // ៣. មុខងារចុចប៊ូតុង "ជជែក"
+        document.getElementById('addContactBtn').onclick = function() {
+            if (currentSearchResult) {
+                if (!contacts.find(c => c.id === currentSearchResult.id)) {
+                    contacts.push({ id: currentSearchResult.id, name: currentSearchResult.name });
+                    localStorage.setItem('chat_contacts', JSON.stringify(contacts));
+                    renderContacts();
+                }
+                startPrivateChat(currentSearchResult.id, currentSearchResult.name);
+                resultBox.style.display = 'none';
+                searchInput.value = "";
+            }
+        };
+
+        // ៤. មុខងារប្តូរការសន្ទនា
+        function startPrivateChat(id, name) {
             window.currentReceiverId = id;
             document.getElementById('chatTitle').innerText = name;
-
-            // បន្ថែមទៅ Contact List បើមិនទាន់មាន
-            if (!document.getElementById('con-' + id)) {
-                const conItem = document.createElement('div');
-                conItem.id = 'con-' + id;
-                conItem.className = 'contact-item';
-                conItem.innerHTML = `<div class="contact-avatar" style="background:#32a852">${name[0].toUpperCase()}</div><div style="font-size:10px;color:white;">${name}</div>`;
-                conItem.onclick = () => startChatting(id, name);
-                contactList.appendChild(conItem);
-            }
-
             loadChatHistory(id);
             if(refreshInterval) clearInterval(refreshInterval);
             refreshInterval = setInterval(() => loadChatHistory(id), 3000);
         }
 
+        // ៥. មុខងារទាញយកសារ
+        function loadChatHistory(receiverId) {
+            fetch(`/get_messages/${receiverId}`)
+                .then(res => res.json())
+                .then(messages => {
+                    let chatHTML = "";
+                    messages.forEach(msg => {
+                        const isMe = msg.sender_id == {{ session['user_id'] }};
+                        const style = isMe ? "background: #2b5278; align-self: flex-end;" : "background: #182533; align-self: flex-start;";
+                        const time = msg.timestamp.split(' ')[1].substring(0,5);
+                        chatHTML += `<div style="${style} padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; max-width: 75%; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);">${msg.message} <div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${time}</div></div>`;
+                    });
+                    if (msgBox.innerHTML !== chatHTML) {
+                        msgBox.innerHTML = chatHTML;
+                        msgBox.scrollTop = msgBox.scrollHeight;
+                    }
+                });
+        }
+
+        // ៦. មុខងារផ្ញើសារ
         function sendMessage() {
             const text = msgInput.value.trim();
             if (text !== "" && window.currentReceiverId) {
@@ -194,6 +170,8 @@
 
         sendBtn.addEventListener('click', sendMessage);
         msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        renderContacts();
     </script>
 </body>
 </html>
