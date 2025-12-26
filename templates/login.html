@@ -3,19 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rathana Chat-Bot</title>
+    <title>Rathana Chat-Bot | ចូលប្រើប្រាស់</title>
     <style>
-        body { font-family: sans-serif; background: #084d6e; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; color: white; }
-        .welcome-msg { font-size: 24px; font-weight: bold; margin-bottom: 30px; }
-        .auth-card { background: white; color: black; padding: 30px; border-radius: 20px; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        h2 { margin-top: 0; margin-bottom: 20px; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #34aadc; border: none; color: white; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; font-size: 16px; }
-        button:hover { background: #288db8; }
-        .toggle { font-size: 13px; color: #34aadc; cursor: pointer; display: block; margin-top: 20px; }
-        
-        /* លាក់ Form Register ជាមុន */
+        /* ស្ទីលរួម (Global Styles) */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #084d6e 0%, #0a6b9a 100%); 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            color: white; 
+        }
+
+        .welcome-msg { 
+            font-size: 28px; 
+            font-weight: bold; 
+            margin-bottom: 25px; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* ប្រអប់កាត (Auth Card) */
+        .auth-card { 
+            background: white; 
+            color: #333; 
+            padding: 35px; 
+            border-radius: 20px; 
+            width: 350px; 
+            text-align: center; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
+        }
+
+        h2 { margin-top: 0; color: #084d6e; margin-bottom: 20px; font-size: 24px; }
+
+        /* ការកំណត់ Input និង Button */
+        input, select { 
+            width: 100%; 
+            padding: 14px; 
+            margin: 10px 0; 
+            border-radius: 12px; 
+            border: 1px solid #ddd; 
+            box-sizing: border-box; 
+            font-size: 15px;
+            transition: 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: #34aadc;
+            outline: none;
+            box-shadow: 0 0 8px rgba(52, 170, 220, 0.2);
+        }
+
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background: #34aadc; 
+            border: none; 
+            color: white; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin-top: 15px; 
+            font-size: 16px; 
+            transition: 0.3s;
+        }
+
+        button:hover { background: #288db8; transform: translateY(-1px); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+
+        .toggle { 
+            font-size: 14px; 
+            color: #34aadc; 
+            cursor: pointer; 
+            display: block; 
+            margin-top: 20px; 
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .toggle:hover { text-decoration: underline; }
+
+        /* លាក់ Form តាមដំណាក់កាល */
         #register-step-1, #register-step-2 { display: none; }
+        
+        .error-msg { color: #e74c3c; font-size: 13px; margin-top: 5px; display: none; }
     </style>
 </head>
 <body>
@@ -25,56 +98,56 @@
     <div class="auth-card">
         
         <div id="login-section">
-            <h2 id="title">Login</h2>
+            <h2>Login</h2>
             <form action="/login" method="POST">
-                <input type="text" name="username" placeholder="Username" required>
-                <input type="password" name="password" placeholder="Password" required>
-                <button type="submit">Login</button>
+                <input type="text" name="username" placeholder="Email ឬ Username" required>
+                <input type="password" name="password" placeholder="លេខសម្ងាត់" required>
+                <button type="submit">ចូលប្រើប្រាស់</button>
             </form>
-            <span class="toggle" onclick="showRegister()">មិនទាន់មានគណនី? ចុះឈ្មោះ</span>
+            <span class="toggle" onclick="showRegisterStep1()">មិនទាន់មានគណនី? ចុះឈ្មោះ</span>
         </div>
 
         <div id="register-step-1">
-            <h2>Register</h2>
+            <h2>បង្កើតគណនី</h2>
+            <p style="font-size: 13px; color: #666;">យើងនឹងផ្ញើលេខកូដផ្ទៀងផ្ទាត់ទៅកាន់ Email របស់អ្នក</p>
             <form onsubmit="sendOTP(event)">
-                <input type="text" id="identifier" name="identifier" placeholder="Email (សម្រាប់ទទួល OTP)" required>
-                <button type="submit" id="continue-btn">Continue</button>
+                <input type="email" id="identifier" placeholder="បញ្ចូល Email របស់អ្នក" required>
+                <button type="submit" id="continue-btn">បន្តទៅមុខ</button>
             </form>
             <span class="toggle" onclick="showLogin()">មានគណនីរួចហើយ? ចូលប្រើ</span>
         </div>
 
         <div id="register-step-2">
-            <h2>Complete Profile</h2>
+            <h2>ផ្ទៀងផ្ទាត់គណនី</h2>
             <form action="/register" method="POST">
-                <input type="hidden" name="identifier" id="hidden-identifier">
+                <input type="hidden" name="identifier" id="hidden-email">
                 
-                <input type="text" name="verify_code" placeholder="លេខកូដ OTP ៦ ខ្ទង់" required>
+                <input type="text" name="verify_code" placeholder="លេខកូដ OTP ៦ ខ្ទង់" required maxlength="6">
                 <input type="text" name="fullname" placeholder="ឈ្មោះពេញរបស់អ្នក" required>
                 
                 <select name="gender" required>
                     <option value="" disabled selected>ជ្រើសរើសភេទ</option>
                     <option value="male">ប្រុស (Male)</option>
                     <option value="female">ស្រី (Female)</option>
+                    <option value="other">ផ្សេងៗ</option>
                 </select>
                 
                 <input type="date" name="dob" required title="ថ្ងៃខែឆ្នាំកំណើត">
-                <input type="password" name="password" placeholder="បង្កើតលេខសម្ងាត់ថ្មី" required>
+                <input type="password" name="password" placeholder="បង្កើតលេខសម្ងាត់ថ្មី" required minlength="6">
                 
                 <button type="submit">ចុះឈ្មោះឥឡូវនេះ</button>
             </form>
-            <span class="toggle" onclick="showRegister()">ថយក្រោយវិញ</span>
+            <span class="toggle" onclick="showRegisterStep1()">← ថយក្រោយវិញ</span>
         </div>
 
     </div>
 
-    
-
     <script>
-        // មុខងារប្តូរផ្ទាំងបង្ហាញ (Toggle Display)
-        function showRegister() {
+        // មុខងារប្តូរផ្ទាំងបង្ហាញ (Toggle Sections)
+        function showRegisterStep1() {
             document.getElementById('login-section').style.display = 'none';
-            document.getElementById('register-step-1').style.display = 'block';
             document.getElementById('register-step-2').style.display = 'none';
+            document.getElementById('register-step-1').style.display = 'block';
         }
 
         function showLogin() {
@@ -90,7 +163,7 @@
             const btn = document.getElementById('continue-btn');
             
             // បង្ហាញស្ថានភាពកំពុងផ្ញើ
-            btn.innerText = "Sending Code...";
+            btn.innerText = "កំពុងផ្ញើលេខកូដ...";
             btn.disabled = true;
 
             try {
@@ -103,18 +176,18 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // ប្រសិនបើផ្ញើជោគជ័យ ប្តូរទៅ Step 2
-                    document.getElementById('hidden-identifier').value = email;
+                    // បើជោគជ័យ៖ រក្សាទុក email ក្នុង input hidden រួចប្តូរទៅ step 2
+                    document.getElementById('hidden-email').value = email;
                     document.getElementById('register-step-1').style.display = 'none';
                     document.getElementById('register-step-2').style.display = 'block';
                 } else {
-                    alert("បញ្ហា: " + data.error);
-                    btn.innerText = "Continue";
+                    alert("បញ្ហា: " + (data.error || "មិនអាចផ្ញើលេខកូដបានទេ"));
+                    btn.innerText = "បន្តទៅមុខ";
                     btn.disabled = false;
                 }
             } catch (error) {
-                alert("មិនអាចភ្ជាប់ទៅកាន់ Server បានទេ! សូមពិនិត្យការភ្ជាប់អ៊ីនធឺណិត។");
-                btn.innerText = "Continue";
+                alert("Error: មិនអាចភ្ជាប់ទៅកាន់ Server បានទេ។");
+                btn.innerText = "បន្តទៅមុខ";
                 btn.disabled = false;
             }
         }
