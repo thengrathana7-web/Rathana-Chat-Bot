@@ -3,17 +3,17 @@
     const msgBox = document.getElementById('msgBox');
     const msgInput = document.getElementById('msgInput');
     const sendBtn = document.querySelector('.send-btn');
-    const userSearch = document.getElementById('userSearch');
-    const searchResult = document.getElementById('searchResult');
+    const userSearch = document.getElementById('userSearch'); // ឬ searchInput
+    const searchResult = document.getElementById('searchResult'); // ឬ resultBox
 
-    // បង្កើត Variable សកលដើម្បីទុក ID អ្នកដែលយើងត្រូវផ្ញើសារទៅ
-    // ប្រសិនបើមាន uid ក្នុង URL ស្រាប់ (ករណី refresh ទំព័រ) វានឹងយក uid នោះ
+    // បង្កើត Variable សកលដើម្បីទុក ID អ្នកទទួល
     const urlParams = new URLSearchParams(window.location.search);
     window.currentReceiverId = urlParams.get('uid') || null;
 
-    // --- ២. មុខងារស្វែងរកមិត្តភក្តិ (Real-time Search) ---
+    // --- ២. មុខងារស្វែងរកមិត្តភក្តិ (បូកបញ្ចូលគ្នា) ---
     userSearch.addEventListener('input', function() {
-        let query = this.value.trim();
+        // លុប @ ចេញ និងលុបចន្លោះទំនេរ (យកតាមកូដថ្មីរបស់អ្នក)
+        let query = this.value.trim().replace('@', '');
         
         if (query.length > 2) {
             let formData = new FormData();
@@ -37,24 +37,29 @@
                     document.getElementById('addContactBtn').onclick = () => {
                         window.currentReceiverId = data.id; 
                         
-                        // ប្តូរឈ្មោះនៅលើ Header ឱ្យទៅជាឈ្មោះមិត្តភក្តិ
-                        document.getElementById('chatWithTitle').innerText = data.name;
+                        // ប្តូរឈ្មោះនៅលើ Header
+                        const chatTitle = document.getElementById('chatWithTitle') || document.querySelector('.header-left div[style*="font-size: 14px"]');
+                        if (chatTitle) chatTitle.innerText = data.name;
                         
-                        // កែប្រែ URL ដោយមិនចាំបាច់ Reload ទំព័រ (ដើម្បីឱ្យដឹងថា chat ជាមួយនរណា)
+                        // កែប្រែ URL ដោយមិនចាំបាច់ Reload ទំព័រ
                         window.history.pushState({}, '', `/chat?uid=${data.id}`);
                         
+                        // លាងសារចាស់ចេញពី msgBox (តាមកូដថ្មី)
+                        msgBox.innerHTML = ""; 
+
                         // បិទប្រអប់ Search
                         searchResult.style.display = 'none';
                         userSearch.value = "";
 
-                        // (ជម្រើស) អ្នកអាចធ្វើការ fetch សារចាស់ៗរវាងអ្នកទាំងពីរមកបង្ហាញនៅទីនេះ
-                        location.reload(); // វិធីងាយបំផុតគឺ reload ដើម្បីឱ្យ server ទាញសារបុគ្គលមក
+                        // Reload ដើម្បីឱ្យ server ទាញសារបុគ្គលមក (រក្សាមុខងារកូដចាស់ដែលអ្នកត្រូវការ)
+                        location.reload(); 
                     };
                 } else {
                     document.getElementById('resultInfo').style.display = 'none';
                     document.getElementById('noResult').style.display = 'block';
                 }
-            });
+            })
+            .catch(err => console.error("Error searching:", err));
         } else {
             searchResult.style.display = 'none';
         }
@@ -71,7 +76,6 @@
     function sendMessage() {
         const text = msgInput.value.trim();
         
-        // បើគ្មានអត្ថបទ ឬ មិនទាន់ជ្រើសរើសអ្នកទទួល មិនឱ្យផ្ញើទេ
         if (text === "") return;
         if (!window.currentReceiverId) {
             alert("សូមស្វែងរក និងជ្រើសរើសមិត្តភក្តិដើម្បីជជែកជាមុនសិន!");
@@ -87,7 +91,6 @@
             })
         }).then(res => {
             if (res.ok) {
-                // បង្ហាញសារដែលទើបផ្ញើលើអេក្រង់ភ្លាមៗ
                 const msgDiv = document.createElement('div');
                 msgDiv.style = "background: #2b5278; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-end; max-width: 75%; color: white; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
                 msgDiv.innerHTML = text + `<div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>`;
@@ -99,10 +102,9 @@
         });
     }
 
-    // ចាប់ព្រឹត្តិការណ៍ចុចប៊ូតុង Send និងចុច Enter
     sendBtn.addEventListener('click', sendMessage);
     msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
-    // រុញ scroll ទៅក្រោមបំផុតពេលបើក chat
+    // រុញ scroll ទៅក្រោមបំផុត
     msgBox.scrollTop = msgBox.scrollHeight;
 </script>
