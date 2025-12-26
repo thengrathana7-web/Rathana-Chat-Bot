@@ -5,91 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rathana Chat-Bot | ចូលប្រើប្រាស់</title>
     <style>
-        /* រចនាប័ទ្មរួម (Global Styles) */
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #084d6e 0%, #0a6b9a 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            margin: 0; 
-            color: white; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; margin: 0; color: white; 
         }
 
-        /* កែសម្រួលអក្សរ Welcome ឱ្យនៅតែមួយបន្ទាត់ចំកណ្តាល */
         .welcome-msg { 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 25px; 
-            text-align: center;
-            white-space: nowrap; /* បង្ខំឱ្យនៅមួយបន្ទាត់ */
-            width: 100%;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 24px; font-weight: bold; margin-bottom: 25px; text-align: center;
+            white-space: nowrap; width: 100%; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
-        /* ប្រអប់កាត (Auth Card) */
         .auth-card { 
-            background: white; 
-            color: #333; 
-            padding: 35px; 
-            border-radius: 24px; 
-            width: 350px; 
-            text-align: center; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
+            background: white; color: #333; padding: 30px; border-radius: 24px; 
+            width: 320px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
         }
 
-        h2 { margin-top: 0; color: #084d6e; margin-bottom: 20px; font-size: 24px; }
-
-        /* ការកំណត់ Input, Select និង Button */
-        input, select { 
-            width: 100%; 
-            padding: 14px; 
-            margin: 10px 0; 
-            border-radius: 12px; 
-            border: 1px solid #ddd; 
-            box-sizing: border-box; 
-            font-size: 15px;
-            transition: 0.3s;
-        }
-
-        input:focus, select:focus {
-            border-color: #34aadc;
-            outline: none;
-            box-shadow: 0 0 8px rgba(52, 170, 220, 0.2);
-        }
-
+        h2 { margin-top: 0; color: #084d6e; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
+        
         button { 
-            width: 100%; 
-            padding: 14px; 
-            background: #34aadc; 
-            border: none; 
-            color: white; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            margin-top: 15px; 
-            font-size: 16px; 
-            transition: 0.3s;
+            width: 100%; padding: 12px; background: #34aadc; border: none; color: white; 
+            border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px;
         }
-
-        button:hover { background: #288db8; transform: translateY(-1px); }
         button:disabled { background: #ccc; cursor: not-allowed; }
 
-        .toggle { 
-            font-size: 14px; 
-            color: #34aadc; 
-            cursor: pointer; 
-            display: block; 
-            margin-top: 20px; 
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .toggle:hover { text-decoration: underline; }
-
-        /* លាក់ Form តាមដំណាក់កាល */
+        .toggle { font-size: 13px; color: #34aadc; cursor: pointer; display: block; margin-top: 15px; }
         #register-step-1, #register-step-2 { display: none; }
     </style>
 </head>
@@ -98,7 +40,6 @@
     <div class="welcome-msg">Welcome to Rathana-Chat-Bot</div>
 
     <div class="auth-card">
-        
         <div id="login-section">
             <h2>Login</h2>
             <form action="/login" method="POST">
@@ -111,7 +52,6 @@
 
         <div id="register-step-1">
             <h2>បង្កើតគណនី</h2>
-            <p style="font-size: 13px; color: #666;">យើងនឹងផ្ញើលេខកូដផ្ទៀងផ្ទាត់ទៅកាន់ Email របស់អ្នក</p>
             <form onsubmit="sendOTP(event)">
                 <input type="email" id="identifier" placeholder="បញ្ចូល Email របស់អ្នក" required>
                 <button type="submit" id="continue-btn">បន្តទៅមុខ</button>
@@ -120,48 +60,40 @@
         </div>
 
         <div id="register-step-2">
-            <h2>ផ្ទៀងផ្ទាត់គណនី</h2>
+            <h2>ផ្ទៀងផ្ទាត់</h2>
             <form action="/register" method="POST">
                 <input type="hidden" name="identifier" id="hidden-email">
                 <input type="text" name="verify_code" placeholder="លេខកូដ OTP ៦ ខ្ទង់" required maxlength="6">
                 <input type="text" name="fullname" placeholder="ឈ្មោះពេញរបស់អ្នក" required>
-                
                 <select name="gender" required>
                     <option value="" disabled selected>ជ្រើសរើសភេទ</option>
-                    <option value="male">ប្រុស (Male)</option>
-                    <option value="female">ស្រី (Female)</option>
-                    <option value="other">ផ្សេងៗ</option>
+                    <option value="male">ប្រុស</option>
+                    <option value="female">ស្រី</option>
                 </select>
-                
-                <input type="date" name="dob" required title="ថ្ងៃខែឆ្នាំកំណើត">
+                <input type="date" name="dob" required>
                 <input type="password" name="password" placeholder="បង្កើតលេខសម្ងាត់ថ្មី" required minlength="6">
-                
                 <button type="submit">ចុះឈ្មោះឥឡូវនេះ</button>
             </form>
-            <span class="toggle" onclick="showRegisterStep1()">← ថយក្រោយវិញ</span>
+            <span class="toggle" onclick="showRegisterStep1()">← ថយក្រោយ</span>
         </div>
-
     </div>
 
     <script>
         function showRegisterStep1() {
             document.getElementById('login-section').style.display = 'none';
-            document.getElementById('register-step-2').style.display = 'none';
             document.getElementById('register-step-1').style.display = 'block';
+            document.getElementById('register-step-2').style.display = 'none';
         }
-
         function showLogin() {
+            document.getElementById('login-section').style.display = 'block';
             document.getElementById('register-step-1').style.display = 'none';
             document.getElementById('register-step-2').style.display = 'none';
-            document.getElementById('login-section').style.display = 'block';
         }
-
         async function sendOTP(event) {
             event.preventDefault();
             const email = document.getElementById('identifier').value;
             const btn = document.getElementById('continue-btn');
-            btn.innerText = "កំពុងផ្ញើលេខកូដ...";
-            btn.disabled = true;
+            btn.innerText = "កំពុងផ្ញើ..."; btn.disabled = true;
 
             try {
                 const response = await fetch('/send-otp', {
@@ -175,14 +107,12 @@
                     document.getElementById('register-step-1').style.display = 'none';
                     document.getElementById('register-step-2').style.display = 'block';
                 } else {
-                    alert("បញ្ហា: " + (data.error || "មិនអាចផ្ញើលេខកូដបានទេ"));
-                    btn.innerText = "បន្តទៅមុខ";
-                    btn.disabled = false;
+                    alert("Error: " + data.error);
+                    btn.innerText = "បន្តទៅមុខ"; btn.disabled = false;
                 }
-            } catch (error) {
-                alert("Error: មិនអាចភ្ជាប់ទៅកាន់ Server បានទេ។");
-                btn.innerText = "បន្តទៅមុខ";
-                btn.disabled = false;
+            } catch (e) {
+                alert("មិនអាចភ្ជាប់ទៅកាន់ Server បានទេ។ សូមពិនិត្យមើល App.py លើ Render!");
+                btn.innerText = "បន្តទៅមុខ"; btn.disabled = false;
             }
         }
     </script>
