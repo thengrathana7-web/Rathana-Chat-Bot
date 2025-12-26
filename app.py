@@ -6,12 +6,12 @@ app = Flask(__name__)
 app.secret_key = 'rathana_secret_key'
 
 def get_db():
-    # ប្រើប្រាស់ផ្លូវ (Path) ត្រឹមត្រូវសម្រាប់ Database
+    # ប្រើផ្លូវទៅកាន់ database.db
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-# បង្កើត Table សម្រាប់ User និង Message
+# បង្កើត Table (រក្សាទុក Table ចាស់ និងបន្ថែមការកំណត់ខ្លះៗ)
 def init_db():
     with get_db() as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -35,7 +35,6 @@ init_db()
 
 @app.route('/')
 def welcome():
-    # ប្រសិនបើមាន Login រួចហើយ ឱ្យទៅទំព័រ Chat តែម្តង
     if 'user_id' in session:
         return redirect(url_for('chat'))
     return render_template('welcome.html')
@@ -74,9 +73,36 @@ def login():
 def chat():
     if 'user_id' not in session:
         return redirect(url_for('welcome'))
-    return render_template('chat.html', user_name=session['user_name'])
+    
+    # ទាញយកសារចាស់ៗមកបង្ហាញ (Load Messages)
+    db = get_db()
+    messages = db.execute('''
+        SELECT m.*, u.name as sender_name 
+        FROM messages m 
+        JOIN users u ON m.sender_id = u.id 
+        ORDER BY timestamp ASC
+    ''').fetchall()
+    
+    return render_template('chat.html', user_name=session['user_name'], old_messages=messages)
 
-# មុខងារថ្មី៖ ស្វែងរកអ្នកប្រើប្រាស់តាម Username
+# --- មុខងារថ្មី៖ ផ្ញើសារ និងរក្សាទុកក្នុង Database ---
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    if 'user_id' not in session:
+        return jsonify({"status": "error"}), 403
+    
+    data = request.get_json()
+    message_text = data.get('message')
+    
+    if message_text:
+        db = get_db()
+        db.execute('INSERT INTO messages (sender_id, message) VALUES (?, ?)',
+                   (session['user_id'], message_text))
+        db.commit()
+        return jsonify({"status": "sent"}), 200
+    return jsonify({"status": "empty"}), 400
+
+# មុខងារស្វែងរកតាម Username (រក្សាទុកដដែល)
 @app.route('/search', methods=['POST'])
 def search_user():
     username = request.form.get('username')
@@ -92,6 +118,5 @@ def logout():
     return redirect(url_for('welcome'))
 
 if __name__ == '__main__':
-    # កំណត់ឱ្យដំណើរការលើគ្រប់ IP (សម្រាប់ Render)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
