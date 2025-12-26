@@ -1,1 +1,26 @@
-
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background-color: #0e1621; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: #17212b; padding: 30px; border-radius: 15px; width: 90%; max-width: 350px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #242f3d; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #2481cc; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        a { color: #2481cc; text-decoration: none; font-size: 14px; display: block; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>បង្កើតគណនី</h2>
+        <form action="/register" method="POST">
+            <input type="text" name="name" placeholder="ឈ្មោះពេញ (Name)" required>
+            <input type="text" name="username" placeholder="ឈ្មោះប្រើប្រាស់ (Username)" required>
+            <input type="email" name="email" placeholder="អ៊ីមែល (Email)" required>
+            <input type="password" name="password" placeholder="លេខសម្ងាត់" required>
+            <button type="submit">ចុះឈ្មោះឥឡូវនេះ</button>
+        </form>
+        <a href="/">ត្រឡប់ទៅការ Login</a>
+    </div>
+</body>
+</html>
