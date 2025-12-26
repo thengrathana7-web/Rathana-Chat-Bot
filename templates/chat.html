@@ -4,16 +4,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* ប្តូរពី 100vh មកប្រើ dvh (Dynamic Viewport Height) ដើម្បីដោះស្រាយបញ្ហា iPhone */
         body { margin: 0; background: #0e1621; font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         
         .chat-header { 
             background: #17212b; padding: 10px 15px; 
             display: flex; align-items: center; justify-content: space-between;
             border-bottom: 1px solid #0e1621;
+            position: relative;
         }
         
-        .search-container { flex: 1; display: flex; justify-content: center; padding: 0 10px; }
+        /* កែសម្រួល search-container ឱ្យមាន position relative សម្រាប់បង្ហាញលទ្ធផល */
+        .search-container { flex: 1; display: flex; justify-content: center; padding: 0 10px; position: relative; }
         .search-container input { 
             width: 100%; max-width: 200px; padding: 8px 15px; 
             border-radius: 20px; border: none; background: #242f3d; color: white; outline: none; font-size: 14px;
@@ -24,11 +25,9 @@
             display: flex; flex-direction: column;
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
             background-size: cover;
-            /* ជំនួយដល់ការ scroll លើ iOS */
             -webkit-overflow-scrolling: touch;
         }
 
-        /* បន្ថែម padding ខាងក្រោមសម្រាប់ iPhone ដែលមានរបារខាងក្រោម */
         .input-area { 
             background: #17212b; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
             display: flex; align-items: center; gap: 10px; 
@@ -44,15 +43,40 @@
 <body>
     <div class="chat-header">
         <a href="/settings" class="profile-icon">{{ user_name[0] | upper }}</a>
+        
         <div class="search-container">
-            <form action="/search" method="POST" style="width: 100%; display: flex; justify-content: center;">
-                <input type="text" name="username" placeholder="ស្វែងរក Username...">
-            </form>
+            <input type="text" id="userSearch" placeholder="ស្វែងរក Username..." autocomplete="off">
+            <div id="searchResult" style="display: none; position: absolute; top: 45px; left: 0; right: 0; background: #17212b; border: 1px solid #2481cc; border-radius: 10px; z-index: 100; padding: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                <div id="resultContent" style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center;">
+                        <div id="resAvatar" style="width: 35px; height: 35px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 10px; color: white;"></div>
+                        <div>
+                            <div id="resName" style="font-weight: bold; font-size: 14px; color: white;"></div>
+                            <div id="resUser" style="font-size: 12px; color: #808b99;"></div>
+                        </div>
+                    </div>
+                    <button id="startChatBtn" style="background: #2481cc; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px;">Chat</button>
+                </div>
+                <div id="noResult" style="display: none; font-size: 13px; color: #ef5350; text-align: center;">រកមិនឃើញគណនីនេះទេ!</div>
+            </div>
         </div>
-        <div style="width: 35px;"></div> </div>
+        
+        <div style="width: 35px;"></div> 
+    </div>
 
     <div class="messages" id="msgBox">
-        </div>
+        {% if old_messages %}
+            {% for msg in old_messages %}
+                <div style="background: {{ '#2b5278' if msg.sender_id == session['user_id'] else '#182533' }}; 
+                            padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; 
+                            align-self: {{ 'flex-end' if msg.sender_id == session['user_id'] else 'flex-start' }}; 
+                            max-width: 75%; color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                    {{ msg.message }}
+                    <div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">{{ msg.timestamp }}</div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
 
     <div class="input-area">
         <i class="far fa-smile" style="color: #808b99; font-size: 22px;"></i>
@@ -64,22 +88,72 @@
         const msgBox = document.getElementById('msgBox');
         const msgInput = document.getElementById('msgInput');
         const sendBtn = document.querySelector('.send-btn');
+        const userSearch = document.getElementById('userSearch');
+        const searchResult = document.getElementById('searchResult');
 
+        // --- មុខងារស្វែងរកមិត្តភក្តិ (Live Search) ---
+        userSearch.addEventListener('input', function() {
+            const query = this.value.trim();
+            if (query.length > 0) {
+                const formData = new FormData();
+                formData.append('username', query);
+
+                fetch('/search_friend', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    searchResult.style.display = 'block';
+                    if (data.status === "found") {
+                        document.getElementById('resultContent').style.display = 'flex';
+                        document.getElementById('noResult').style.display = 'none';
+                        document.getElementById('resName').innerText = data.name;
+                        document.getElementById('resUser').innerText = '@' + data.username;
+                        document.getElementById('resAvatar').innerText = data.name[0].toUpperCase();
+                    } else {
+                        document.getElementById('resultContent').style.display = 'none';
+                        document.getElementById('noResult').style.display = 'block';
+                    }
+                });
+            } else {
+                searchResult.style.display = 'none';
+            }
+        });
+
+        // បិទផ្ទាំង Search ពេលចុចខាងក្រៅ
+        document.addEventListener('click', function(e) {
+            if (!userSearch.contains(e.target) && !searchResult.contains(e.target)) {
+                searchResult.style.display = 'none';
+            }
+        });
+
+        // --- មុខងារផ្ញើសារ (Update ឱ្យទៅរក្សាទុកក្នុង Database) ---
         function sendMessage() {
             const text = msgInput.value.trim();
             if (text !== "") {
-                const msgDiv = document.createElement('div');
-                msgDiv.style = "background: #2b5278; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-end; max-width: 75%; color: white; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
-                msgDiv.innerHTML = text + `<div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>`;
-                
-                msgBox.appendChild(msgDiv);
-                msgInput.value = "";
-                msgBox.scrollTop = msgBox.scrollHeight;
+                fetch('/send_message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                }).then(res => {
+                    if (res.ok) {
+                        const msgDiv = document.createElement('div');
+                        msgDiv.style = "background: #2b5278; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-end; max-width: 75%; color: white; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
+                        msgDiv.innerHTML = text + `<div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>`;
+                        msgBox.appendChild(msgDiv);
+                        msgInput.value = "";
+                        msgBox.scrollTop = msgBox.scrollHeight;
+                    }
+                });
             }
         }
 
         sendBtn.addEventListener('click', sendMessage);
         msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        // Scroll ទៅក្រោមបង្អស់ពេល Load ទំព័រ
+        msgBox.scrollTop = msgBox.scrollHeight;
     </script>
 </body>
 </html>
