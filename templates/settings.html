@@ -1,125 +1,44 @@
 <!DOCTYPE html>
-<html lang="km">
+<html>
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <title>ការកំណត់ - Rathana Chat Bot</title>
     <style>
-        body { 
-            background: #0e1621; 
-            color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            margin: 0; 
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .box { 
-            background: #17212b; 
-            padding: 35px 25px; 
-            border-radius: 20px; 
-            width: 100%;
-            max-width: 350px; 
-            text-align: center; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-        }
-        .avatar { 
-            width: 90px; 
-            height: 90px; 
-            background: #2481cc; 
-            border-radius: 50%; 
-            margin: 0 auto 15px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 35px; 
-            font-weight: bold; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        h3 { margin: 10px 0 5px; font-size: 20px; }
-        .username-tag { 
-            color: #808b99; 
-            font-size: 15px; 
-            margin-bottom: 25px; 
-            display: block;
-        }
-        .info-group { text-align: left; margin-bottom: 10px; }
-        label { 
-            color: #2481cc; 
-            font-size: 13px; 
-            font-weight: bold; 
-            margin-left: 5px; 
-        }
-        input { 
-            width: 100%; 
-            padding: 14px; 
-            margin: 8px 0 15px; 
-            border-radius: 10px; 
-            border: 2px solid transparent; 
-            background: #242f3d; 
-            color: white; 
-            box-sizing: border-box; 
-            outline: none;
-            transition: 0.3s;
-        }
-        input:focus { border-color: #2481cc; }
+        body { background: #0e1621; color: white; font-family: sans-serif; margin: 0; padding: 20px; }
+        .header { display: flex; align-items: center; margin-bottom: 30px; }
+        .back-btn { color: #2481cc; text-decoration: none; font-size: 18px; margin-right: 20px; }
         
-        button { 
-            width: 100%; 
-            padding: 13px; 
-            background: #2481cc; 
-            color: white; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 16px;
-            transition: 0.3s;
-        }
-        button:hover { background: #1d6fa5; }
-
-        .back-link { 
-            display: inline-block; 
-            margin-top: 20px; 
-            color: #808b99; 
-            text-decoration: none; 
-            font-size: 14px; 
-            transition: 0.3s;
-        }
-        .back-link:hover { color: #2481cc; }
+        .profile-card { background: #17212b; padding: 20px; border-radius: 15px; text-align: center; }
+        .avatar { width: 80px; height: 80px; background: #2481cc; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; }
         
-        .btn-logout { 
-            display: block; 
-            margin-top: 15px; 
-            color: #ef5350; 
-            text-decoration: none; 
-            font-weight: bold; 
-            font-size: 14px;
-        }
+        .info-group { text-align: left; margin-top: 20px; }
+        label { color: #2481cc; font-size: 13px; font-weight: bold; margin-left: 5px; }
+        input { width: 100%; padding: 12px; margin: 5px 0 15px; border-radius: 10px; border: none; background: #242f3d; color: white; box-sizing: border-box; outline: none; }
+        
+        .btn-save { width: 100%; padding: 13px; background: #2481cc; border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-logout { display: block; text-align: center; color: #ef5350; text-decoration: none; margin-top: 25px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="box">
+    <div class="header">
+        <a href="/chat" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+        <h2 style="margin: 0; font-size: 20px;">Settings</h2>
+    </div>
+
+    <div class="profile-card">
         <div class="avatar">{{ user_name[0] | upper }}</div>
-        
-        <h3>កែប្រែព័ត៌មាន</h3>
-        <span class="username-tag">@{{ username }}</span>
-        
         <form action="/update_profile" method="POST">
             <div class="info-group">
-                <label>ឈ្មោះបង្ហាញ (Name)</label>
-                <input type="text" name="name" value="{{ user_name }}" placeholder="ឈ្មោះថ្មី" required>
+                <label>Name</label>
+                <input type="text" name="name" value="{{ user_name }}" required>
+                
+                <label>Username (មិនអាចប្តូរបាន)</label>
+                <input type="text" value="@{{ username }}" disabled style="opacity: 0.6;">
             </div>
-            
-            <button type="submit">រក្សាទុកការផ្លាស់ប្តូរ</button>
+            <button type="submit" class="btn-save">Save Changes</button>
         </form>
-        
-        <a href="/chat" class="back-link"><i class="fas fa-arrow-left"></i> ត្រឡប់ទៅការជជែក</a>
-        <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> ចាកចេញពីគណនី</a>
     </div>
+
+    <a href="/logout" class="btn-logout">Logout</a>
 </body>
 </html>
