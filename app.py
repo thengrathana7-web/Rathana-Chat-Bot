@@ -6,14 +6,15 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 app = Flask(__name__)
 app.secret_key = 'rathana_secret_key'
 
+# មុខងារភ្ជាប់ទៅកាន់ Database
 def get_db():
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
 
+# មុខងារបង្កើតតារាងក្នុង Database (ប្រសិនបើមិនទាន់មាន)
 def init_db():
     with get_db() as conn:
-        # បង្កើត Table Users (ប្រសិនបើមិនទាន់មាន)
         conn.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -23,7 +24,6 @@ def init_db():
             user_id_number INTEGER UNIQUE, 
             profile_pic TEXT DEFAULT 'default.png'
         )''')
-        # បង្កើត Table Messages
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
@@ -33,7 +33,6 @@ def init_db():
         )''')
     print("Database initialized.")
 
-# ចាប់ផ្តើម Database នៅពេល Run App
 init_db()
 
 @app.route('/')
@@ -60,7 +59,7 @@ def register():
             db.commit()
             return redirect(url_for('welcome'))
         except:
-            return "Username, Email ឬ ID នេះមានគេប្រើរួចហើយ! សូមព្យាយាមម្តងទៀត។"
+            return "Username, Email ឬ ID នេះមានគេប្រើរួចហើយ!"
     return render_template('register.html')
 
 @app.route('/login', methods=['POST'])
@@ -143,7 +142,7 @@ def send_message():
         return jsonify({"status": "sent"}), 200
     return jsonify({"status": "empty"}), 400
 
-# --- មុខងារថ្មីដែលអ្នកចង់បន្ថែម ---
+# --- មុខងារថ្មី៖ បន្ថែម Route សម្រាប់ទាញយកប្រវត្តិសាររវាងអ្នកប្រើប្រាស់ពីរនាក់ ---
 @app.route('/get_messages/<int:receiver_id>')
 def get_messages(receiver_id):
     if 'user_id' not in session:
