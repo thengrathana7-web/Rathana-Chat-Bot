@@ -20,7 +20,7 @@ def init_db():
             password TEXT NOT NULL,
             profile_pic TEXT DEFAULT 'default.png'
         )''')
-        # បន្ថែម receiver_id ក្នុង table messages បើមិនទាន់មាន
+        # បន្ថែម receiver_id ក្នុង table messages
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
@@ -68,20 +68,18 @@ def login():
         return redirect(url_for('chat'))
     return "Email ឬ Password មិនត្រឹមត្រូវ!"
 
-# --- កែប្រែ Route Chat ឱ្យអាចមើលសារជាមួយមិត្តភក្តិជាក់លាក់ ---
 @app.route('/chat')
 def chat():
     if 'user_id' not in session:
         return redirect(url_for('welcome'))
     
-    receiver_id = request.args.get('uid') # យក ID មិត្តភក្តិពី URL
+    receiver_id = request.args.get('uid') 
     db = get_db()
     
     messages = []
     receiver_name = "Global Chat"
     
     if receiver_id:
-        # ទាញយកឈ្មោះមិត្តភក្តិ
         user = db.execute('SELECT name FROM users WHERE id = ?', (receiver_id,)).fetchone()
         if user:
             receiver_name = user['name']
@@ -101,7 +99,6 @@ def chat():
                            chat_with_name=receiver_name,
                            receiver_id=receiver_id)
 
-# --- កែប្រែការផ្ញើសារឱ្យមាន Receiver ---
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if 'user_id' not in session:
@@ -109,7 +106,7 @@ def send_message():
     
     data = request.get_json()
     message_text = data.get('message')
-    receiver_id = data.get('receiver_id') # ទទួល ID អ្នកទទួល
+    receiver_id = data.get('receiver_id') 
     
     if message_text:
         db = get_db()
@@ -119,24 +116,31 @@ def send_message():
         return jsonify({"status": "sent"}), 200
     return jsonify({"status": "empty"}), 400
 
+# --- មុខងារស្វែងរកមិត្តភក្តិដែលបានកែសម្រួលថ្មី ---
 @app.route('/search_friend', methods=['POST'])
 def search_friend():
     if 'user_id' not in session:
-        return jsonify({"status": "error"}), 401
+        return {"status": "error", "message": "Login required"}, 401
     
+    # ចាប់យក username ហើយលុបចន្លោះទំនេរ
     query = request.form.get('username', '').replace('@', '').strip()
+    
+    if not query:
+        return {"status": "not_found"}
+
     db = get_db()
+    # ស្វែងរកមិត្តភក្តិតាម Username (មិនឱ្យឃើញខ្លួនឯង)
     user = db.execute('SELECT id, username, name FROM users WHERE username = ? AND id != ?', 
                       (query, session['user_id'])).fetchone()
     
     if user:
-        return jsonify({
+        return {
             "status": "found", 
             "id": user['id'], 
             "name": user['name'], 
             "username": user['username']
-        })
-    return jsonify({"status": "not_found"})
+        }
+    return {"status": "not_found"}
 
 @app.route('/settings')
 def settings():
