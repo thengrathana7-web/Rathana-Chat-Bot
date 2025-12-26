@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rathana Chat-Bot | ចូលប្រើប្រាស់</title>
+    <title>Rathana Chat-Bot</title>
     <style>
         body { 
             font-family: 'Segoe UI', sans-serif;
@@ -11,18 +11,11 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             height: 100vh; margin: 0; color: white; 
         }
-        .welcome-msg { 
-            font-size: 24px; font-weight: bold; margin-bottom: 25px; text-align: center;
-            white-space: nowrap; width: 100%; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        .auth-card { 
-            background: white; color: #333; padding: 30px; border-radius: 24px; 
-            width: 320px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
-        }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #34aadc; border: none; color: white; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .toggle { font-size: 13px; color: #34aadc; cursor: pointer; display: block; margin-top: 15px; }
+        .welcome-msg { font-size: 24px; font-weight: bold; margin-bottom: 25px; text-align: center; }
+        .auth-card { background: white; color: #333; padding: 30px; border-radius: 20px; width: 320px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #34aadc; border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #ccc; }
         #register-step-1, #register-step-2 { display: none; }
     </style>
 </head>
@@ -30,44 +23,32 @@
     <div class="welcome-msg">Welcome to Rathana-Chat-Bot</div>
     <div class="auth-card">
         <div id="login-section">
-            <h2 style="color: #084d6e;">Login</h2>
-            <form action="/login" method="POST">
-                <input type="text" name="username" placeholder="Email ឬ Username" required>
-                <input type="password" name="password" placeholder="លេខសម្ងាត់" required>
-                <button type="submit">ចូលប្រើប្រាស់</button>
-            </form>
-            <span class="toggle" onclick="showRegisterStep1()">មិនទាន់មានគណនី? ចុះឈ្មោះ</span>
+            <h2>ចូលប្រើប្រាស់</h2>
+            <input type="text" placeholder="Username">
+            <input type="password" placeholder="លេខសម្ងាត់">
+            <button>Login</button>
+            <p style="color: #34aadc; cursor: pointer;" onclick="showRegister()">មិនទាន់មានគណនី? ចុះឈ្មោះ</p>
         </div>
         <div id="register-step-1">
-            <h2 style="color: #084d6e;">បង្កើតគណនី</h2>
+            <h2>បង្កើតគណនី</h2>
             <form onsubmit="sendOTP(event)">
-                <input type="email" id="identifier" placeholder="បញ្ចូល Email របស់អ្នក" required>
-                <button type="submit" id="continue-btn">បន្តទៅមុខ</button>
+                <input type="email" id="email-input" placeholder="បញ្ចូល Email" required>
+                <button type="submit" id="send-btn">បន្តទៅមុខ</button>
             </form>
-            <span class="toggle" onclick="showLogin()">មានគណនីរួចហើយ? ចូលប្រើ</span>
-        </div>
-        <div id="register-step-2">
-            <h2 style="color: #084d6e;">ផ្ទៀងផ្ទាត់</h2>
-            <form action="/register" method="POST">
-                <input type="hidden" name="identifier" id="hidden-email">
-                <input type="text" name="verify_code" placeholder="លេខកូដ OTP ៦ ខ្ទង់" required maxlength="6">
-                <input type="text" name="fullname" placeholder="ឈ្មោះពេញរបស់អ្នក" required>
-                <select name="gender" required><option value="" disabled selected>ជ្រើសរើសភេទ</option><option value="male">ប្រុស</option><option value="female">ស្រី</option></select>
-                <input type="date" name="dob" required>
-                <input type="password" name="password" placeholder="បង្កើតលេខសម្ងាត់ថ្មី" required minlength="6">
-                <button type="submit">ចុះឈ្មោះឥឡូវនេះ</button>
-            </form>
-            <span class="toggle" onclick="showRegisterStep1()">← ថយក្រោយ</span>
         </div>
     </div>
+
     <script>
-        function showRegisterStep1() { document.getElementById('login-section').style.display = 'none'; document.getElementById('register-step-1').style.display = 'block'; document.getElementById('register-step-2').style.display = 'none'; }
-        function showLogin() { document.getElementById('login-section').style.display = 'block'; document.getElementById('register-step-1').style.display = 'none'; document.getElementById('register-step-2').style.display = 'none'; }
+        function showRegister() {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('register-step-1').style.display = 'block';
+        }
         async function sendOTP(event) {
             event.preventDefault();
-            const email = document.getElementById('identifier').value;
-            const btn = document.getElementById('continue-btn');
+            const email = document.getElementById('email-input').value;
+            const btn = document.getElementById('send-btn');
             btn.innerText = "កំពុងផ្ញើ..."; btn.disabled = true;
+
             try {
                 const response = await fetch('/send-otp', {
                     method: 'POST',
@@ -76,11 +57,14 @@
                 });
                 const data = await response.json();
                 if (data.success) {
-                    document.getElementById('hidden-email').value = email;
-                    document.getElementById('register-step-1').style.display = 'none';
-                    document.getElementById('register-step-2').style.display = 'block';
-                } else { alert("Error: " + data.error); btn.innerText = "បន្តទៅមុខ"; btn.disabled = false; }
-            } catch (e) { alert("មិនអាចភ្ជាប់ទៅកាន់ Server បានទេ។ សូមពិនិត្យមើល App.py លើ Render!"); btn.innerText = "បន្តទៅមុខ"; btn.disabled = false; }
+                    alert("លេខកូដត្រូវបានផ្ញើ! (សូមពិនិត្យមើល Logs លើ Render)");
+                } else {
+                    alert("កំហុស: " + data.error);
+                }
+            } catch (error) {
+                alert("មិនអាចភ្ជាប់ទៅ Server បានទេ!");
+            }
+            btn.innerText = "បន្តទៅមុខ"; btn.disabled = false;
         }
     </script>
 </body>
