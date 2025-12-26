@@ -1,79 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { margin: 0; background: #0e1621; font-family: sans-serif; display: flex; height: 100vh; color: white; }
-        /* Sidebar */
-        .sidebar { width: 300px; background: #17212b; border-right: 1px solid #0e1621; display: flex; flex-direction: column; }
-        .search-box { padding: 15px; }
-        .search-box input { width: 100%; padding: 10px; border-radius: 20px; border: none; background: #242f3d; color: white; outline: none; }
-        /* Chat Area */
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0e1621; }
-        .chat-header { background: #17212b; padding: 15px; display: flex; align-items: center; border-bottom: 1px solid #0e1621; }
-        /* កែប្រែផ្នែក messages ឱ្យមានលក្ខណៈ Flex ដើម្បីឱ្យសាររត់ទៅខាងស្តាំបានត្រឹមត្រូវ */
-        .messages { 
-            flex: 1; 
-            padding: 20px; 
-            overflow-y: auto; 
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-            display: flex;
-            flex-direction: column;
+        body { margin: 0; background: #0e1621; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Header */
+        .chat-header { 
+            background: #17212b; 
+            padding: 10px 15px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            border-bottom: 1px solid #0e1621;
+            z-index: 10;
         }
-        /* Input Area */
-        .input-area { background: #17212b; padding: 10px 20px; display: flex; align-items: center; gap: 15px; }
-        .input-area input { flex: 1; background: transparent; border: none; color: white; padding: 10px; font-size: 16px; outline: none; }
-        .input-area i { color: #808b99; font-size: 20px; cursor: pointer; }
-        .send-btn { color: #2481cc !important; }
+        
+        .header-left { display: flex; align-items: center; flex: 1; }
+        .search-container { flex: 2; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .search-container input { 
+            width: 100%; max-width: 250px; 
+            padding: 8px 15px; border-radius: 20px; 
+            border: none; background: #242f3d; color: white; outline: none;
+        }
+
+        /* លទ្ធផលស្វែងរកលោតចេញមកក្រោម Search Input */
+        #searchResult {
+            position: absolute; top: 45px; background: #17212b; 
+            width: 100%; max-width: 250px; border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 100; display: none;
+        }
+        .search-item { padding: 10px 15px; border-bottom: 1px solid #242f3d; cursor: pointer; }
+        .search-item:hover { background: #2481cc; }
+
+        /* បង្ហាញសារ */
+        .messages { 
+            flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column;
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-size: cover; -webkit-overflow-scrolling: touch;
+        }
+
+        .input-area { background: #17212b; padding: 10px; display: flex; align-items: center; gap: 10px; }
+        .input-area input { flex: 1; background: transparent; border: none; color: white; padding: 10px; outline: none; }
+        .settings-btn { color: #808b99; font-size: 20px; cursor: pointer; text-decoration: none; }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="search-box">
-            <input type="text" placeholder="Search Username...">
+    <div class="chat-header">
+        <div class="header-left">
+            <div style="width: 35px; height: 35px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">R</div>
+            <div style="margin-left: 10px; font-size: 14px;">Rathana Bot</div>
         </div>
-        <div style="padding: 20px; color: #808b99; text-align: center;">មិនទាន់មានការសន្ទនា</div>
+        
+        <div class="search-container">
+            <input type="text" id="userSearch" placeholder="ស្វែងរក Username...">
+            <div id="searchResult"></div> </div>
+        
+        <div class="header-right">
+            <a href="/logout" class="settings-btn"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
     </div>
-    <div class="chat-area">
-        <div class="chat-header">
-            <div style="width: 40px; height: 40px; background: #2481cc; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-weight: bold;">R</div>
-            <div>
-                <div style="font-weight: bold;">Rathana Chat Bot</div>
-                <div style="font-size: 12px; color: #2481cc;">online</div>
-            </div>
-        </div>
-        <div class="messages"></div>
-        <div class="input-area">
-            <i class="far fa-smile"></i>
-            <input type="text" placeholder="Message">
-            <i class="fas fa-paperclip"></i>
-            <i class="fas fa-paper-plane send-btn"></i>
-        </div>
+
+    <div class="messages" id="msgBox"></div>
+
+    <div class="input-area">
+        <i class="far fa-smile"></i>
+        <input type="text" id="msgInput" placeholder="Message">
+        <i class="fas fa-paper-plane send-btn" style="color: #2481cc; cursor: pointer;"></i>
     </div>
 
     <script>
-        const sendBtn = document.querySelector('.send-btn');
-        const messageInput = document.querySelector('.input-area input');
-        const messageContainer = document.querySelector('.messages');
+        // --- មុខងារ Search User ---
+        const searchInput = document.getElementById('userSearch');
+        const searchResult = document.getElementById('searchResult');
 
-        function sendMessage() {
-            const text = messageInput.value.trim();
-            if (text !== "") {
-                // បង្កើតផ្ទាំងសារផ្ញើចេញ
-                const msgDiv = document.createElement('div');
-                msgDiv.style = "background: #2b5278; padding: 10px; border-radius: 10px; margin-bottom: 10px; align-self: flex-end; max-width: 70%; position: relative; word-wrap: break-word; color: white;";
-                msgDiv.innerHTML = text + `<span style="font-size: 10px; color: #808b99; margin-left: 10px; float: right; margin-top: 5px;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
-                
-                messageContainer.appendChild(msgDiv);
-                messageInput.value = "";
-                messageContainer.scrollTop = messageContainer.scrollHeight;
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            if (query.length > 0) {
+                const formData = new FormData();
+                formData.append('username', query);
+
+                fetch('/search', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "found") {
+                        searchResult.style.display = 'block';
+                        searchResult.innerHTML = `<div class="search-item" onclick="startChat('${data.name}')">
+                            <i class="fas fa-user"></i> ${data.name} (@${data.username})
+                        </div>`;
+                    } else {
+                        searchResult.innerHTML = `<div class="search-item">រកមិនឃើញទេ</div>`;
+                    }
+                });
+            } else {
+                searchResult.style.display = 'none';
             }
+        });
+
+        function startChat(name) {
+            alert("ចាប់ផ្តើមជជែកជាមួយ៖ " + name);
+            searchResult.style.display = 'none';
+            searchInput.value = "";
         }
 
-        sendBtn.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
+        // --- មុខងារផ្ញើសារ ---
+        function scrollToBottom() {
+            const msgBox = document.getElementById('msgBox');
+            msgBox.scrollTop = msgBox.scrollHeight;
+        }
+
+        document.querySelector('.send-btn').addEventListener('click', () => {
+            const input = document.getElementById('msgInput');
+            if(input.value.trim() !== "") {
+                const div = document.createElement('div');
+                div.style = "background: #2b5278; padding: 10px; border-radius: 12px; margin-bottom: 8px; align-self: flex-end; max-width: 80%; color: white; word-wrap: break-word;";
+                div.innerHTML = input.value + `<span style="font-size: 10px; color: #808b99; margin-left: 10px; float: right;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+                document.getElementById('msgBox').appendChild(div);
+                input.value = "";
+                scrollToBottom();
+            }
         });
     </script>
 </body>
