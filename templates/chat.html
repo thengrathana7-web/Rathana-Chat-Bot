@@ -13,7 +13,6 @@
             position: relative;
         }
 
-        /* បន្ថែមសម្រាប់បង្ហាញឈ្មោះមិត្តភក្តិពេលចុច Chat */
         .header-left { display: flex; align-items: center; gap: 10px; flex: 1; }
         
         .search-container { flex: 1; display: flex; justify-content: center; padding: 0 10px; position: relative; }
@@ -46,25 +45,26 @@
     <div class="chat-header">
         <div class="header-left">
             <a href="/settings" class="profile-icon">{{ user_name[0] | upper }}</a>
-            <div style="font-weight: bold; color: white; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                {{ user_name }}
+            <div id="chatWithTitle" style="font-weight: bold; color: white; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ chat_with_name if chat_with_name else user_name }}
             </div>
         </div>
         
         <div class="search-container">
-            <input type="text" id="userSearch" placeholder="ស្វែងរក Username..." autocomplete="off">
-            <div id="searchResult" style="display: none; position: absolute; top: 45px; left: 0; right: 0; background: #17212b; border: 1px solid #2481cc; border-radius: 10px; z-index: 100; padding: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-                <div id="resultContent" style="display: flex; align-items: center; justify-content: space-between;">
+            <input type="text" id="userSearch" placeholder="ស្វែងរក @username..." autocomplete="off">
+            
+            <div id="searchResult" style="display: none; position: absolute; top: 45px; left: 0; right: 0; background: #17212b; border: 1px solid #2481cc; border-radius: 12px; z-index: 1000; padding: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.5);">
+                <div id="resultInfo" style="display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center;">
                         <div id="resAvatar" style="width: 35px; height: 35px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 10px; color: white;"></div>
                         <div>
                             <div id="resName" style="font-weight: bold; font-size: 14px; color: white;"></div>
-                            <div id="resUser" style="font-size: 12px; color: #808b99;"></div>
+                            <div id="resUser" style="font-size: 11px; color: #808b99;"></div>
                         </div>
                     </div>
-                    <button id="startChatBtn" style="background: #2481cc; color: white; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px;">Chat</button>
+                    <button id="addContactBtn" style="background: #2481cc; color: white; border: none; padding: 6px 15px; border-radius: 15px; cursor: pointer; font-size: 12px;">ជជែក</button>
                 </div>
-                <div id="noResult" style="display: none; font-size: 13px; color: #ef5350; text-align: center;">រកមិនឃើញគណនីនេះទេ!</div>
+                <div id="noResult" style="display: none; color: #ef5350; font-size: 13px; text-align: center; padding: 5px;">រកមិនឃើញគណនីនេះទេ!</div>
             </div>
         </div>
         
@@ -97,13 +97,14 @@
         const sendBtn = document.querySelector('.send-btn');
         const userSearch = document.getElementById('userSearch');
         const searchResult = document.getElementById('searchResult');
-        const resultContent = document.getElementById('resultContent');
+        const resultInfo = document.getElementById('resultInfo');
         const noResult = document.getElementById('noResult');
+        const addContactBtn = document.getElementById('addContactBtn');
 
-        // --- មុខងារស្វែងរកមិត្តភក្តិ (ថ្មី) ---
+        // --- មុខងារស្វែងរកមិត្តភក្តិ ---
         userSearch.addEventListener('input', function() {
             const query = this.value.trim();
-            if (query.length > 2) { 
+            if (query.length > 1) { // រកចាប់ពីវាយបាន ២ តួឡើងទៅ
                 const formData = new FormData();
                 formData.append('username', query);
 
@@ -115,21 +116,18 @@
                 .then(data => {
                     searchResult.style.display = 'block';
                     if (data.status === "found") {
-                        resultContent.style.display = 'flex';
+                        resultInfo.style.display = 'flex';
                         noResult.style.display = 'none';
                         document.getElementById('resName').innerText = data.name;
                         document.getElementById('resUser').innerText = '@' + data.username;
                         document.getElementById('resAvatar').innerText = data.name[0].toUpperCase();
                         
-                        document.getElementById('startChatBtn').onclick = function() {
-                            // ប្តូរចំណងជើង Chat ទៅជាឈ្មោះមិត្តភក្តិ
-                            const headerTitle = document.querySelector('.header-left div[style*="font-weight: bold"]');
-                            if(headerTitle) headerTitle.innerText = data.name;
-                            searchResult.style.display = 'none';
-                            userSearch.value = "";
+                        // ចុចប៊ូតុង "ជជែក" ដើម្បីបើកការសន្ទនា
+                        addContactBtn.onclick = function() {
+                            window.location.href = `/chat?uid=${data.id}`;
                         };
                     } else {
-                        resultContent.style.display = 'none';
+                        resultInfo.style.display = 'none';
                         noResult.style.display = 'block';
                     }
                 });
@@ -138,20 +136,27 @@
             }
         });
 
+        // បិទ Dropdown ពេលចុចខាងក្រៅ
         document.addEventListener('click', function(e) {
             if (!userSearch.contains(e.target) && !searchResult.contains(e.target)) {
                 searchResult.style.display = 'none';
             }
         });
 
-        // --- មុខងារផ្ញើសារ (រក្សាទុកដដែល) ---
+        // --- មុខងារផ្ញើសារ (Update ឱ្យស្គាល់ receiver_id ពី URL) ---
         function sendMessage() {
             const text = msgInput.value.trim();
+            const urlParams = new URLSearchParams(window.location.search);
+            const receiverId = urlParams.get('uid'); // យក uid ពី URL
+
             if (text !== "") {
                 fetch('/send_message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
+                    body: JSON.stringify({ 
+                        message: text,
+                        receiver_id: receiverId // ផ្ញើទៅកាន់ receiver ជាក់លាក់
+                    })
                 }).then(res => {
                     if (res.ok) {
                         const msgDiv = document.createElement('div');
