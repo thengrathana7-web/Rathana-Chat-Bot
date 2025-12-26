@@ -8,14 +8,22 @@
         /* Sidebar */
         .sidebar { width: 300px; background: #17212b; border-right: 1px solid #0e1621; display: flex; flex-direction: column; }
         .search-box { padding: 15px; }
-        .search-box input { width: 100%; padding: 10px; border-radius: 20px; border: none; background: #242f3d; color: white; }
+        .search-box input { width: 100%; padding: 10px; border-radius: 20px; border: none; background: #242f3d; color: white; outline: none; }
         /* Chat Area */
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #0e1621; }
         .chat-header { background: #17212b; padding: 15px; display: flex; align-items: center; border-bottom: 1px solid #0e1621; }
-        .messages { flex: 1; padding: 20px; overflow-y: auto; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        /* កែប្រែផ្នែក messages ឱ្យមានលក្ខណៈ Flex ដើម្បីឱ្យសាររត់ទៅខាងស្តាំបានត្រឹមត្រូវ */
+        .messages { 
+            flex: 1; 
+            padding: 20px; 
+            overflow-y: auto; 
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            display: flex;
+            flex-direction: column;
+        }
         /* Input Area */
         .input-area { background: #17212b; padding: 10px 20px; display: flex; align-items: center; gap: 15px; }
-        .input-area input { flex: 1; background: transparent; border: none; color: white; padding: 10px; font-size: 16px; }
+        .input-area input { flex: 1; background: transparent; border: none; color: white; padding: 10px; font-size: 16px; outline: none; }
         .input-area i { color: #808b99; font-size: 20px; cursor: pointer; }
         .send-btn { color: #2481cc !important; }
     </style>
@@ -43,5 +51,30 @@
             <i class="fas fa-paper-plane send-btn"></i>
         </div>
     </div>
+
+    <script>
+        const sendBtn = document.querySelector('.send-btn');
+        const messageInput = document.querySelector('.input-area input');
+        const messageContainer = document.querySelector('.messages');
+
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text !== "") {
+                // បង្កើតផ្ទាំងសារផ្ញើចេញ
+                const msgDiv = document.createElement('div');
+                msgDiv.style = "background: #2b5278; padding: 10px; border-radius: 10px; margin-bottom: 10px; align-self: flex-end; max-width: 70%; position: relative; word-wrap: break-word; color: white;";
+                msgDiv.innerHTML = text + `<span style="font-size: 10px; color: #808b99; margin-left: 10px; float: right; margin-top: 5px;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+                
+                messageContainer.appendChild(msgDiv);
+                messageInput.value = "";
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
 </body>
 </html>
