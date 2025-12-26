@@ -6,7 +6,6 @@ app = Flask(__name__)
 app.secret_key = 'rathana_secret_key'
 
 def get_db():
-    # ប្រើផ្លូវទៅកាន់ database.db
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
@@ -21,18 +20,17 @@ def init_db():
             password TEXT NOT NULL,
             profile_pic TEXT DEFAULT 'default.png'
         )''')
+        # បន្ថែម receiver_id ក្នុង table messages បើមិនទាន់មាន
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
-            receiver_id INTEGER,
+            receiver_id INTEGER, 
             message TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )''')
     print("Database initialized.")
 
 init_db()
-
-# --- ROUTES ដើម ---
 
 @app.route('/')
 def welcome():
@@ -70,21 +68,40 @@ def login():
         return redirect(url_for('chat'))
     return "Email ឬ Password មិនត្រឹមត្រូវ!"
 
+# --- កែប្រែ Route Chat ឱ្យអាចមើលសារជាមួយមិត្តភក្តិជាក់លាក់ ---
 @app.route('/chat')
 def chat():
     if 'user_id' not in session:
         return redirect(url_for('welcome'))
     
+    receiver_id = request.args.get('uid') # យក ID មិត្តភក្តិពី URL
     db = get_db()
-    messages = db.execute('''
-        SELECT m.*, u.name as sender_name 
-        FROM messages m 
-        JOIN users u ON m.sender_id = u.id 
-        ORDER BY timestamp ASC
-    ''').fetchall()
     
-    return render_template('chat.html', user_name=session['user_name'], old_messages=messages)
+    messages = []
+    receiver_name = "Global Chat"
+    
+    if receiver_id:
+        # ទាញយកឈ្មោះមិត្តភក្តិ
+        user = db.execute('SELECT name FROM users WHERE id = ?', (receiver_id,)).fetchone()
+        if user:
+            receiver_name = user['name']
+            # ទាញយកសាររវាងអ្នកទាំងពីរ (Private Message)
+            messages = db.execute('''
+                SELECT m.*, u.name as sender_name 
+                FROM messages m 
+                JOIN users u ON m.sender_id = u.id 
+                WHERE (sender_id = ? AND receiver_id = ?) 
+                OR (sender_id = ? AND receiver_id = ?)
+                ORDER BY timestamp ASC
+            ''', (session['user_id'], receiver_id, receiver_id, session['user_id'])).fetchall()
+    
+    return render_template('chat.html', 
+                           user_name=session['user_name'], 
+                           old_messages=messages, 
+                           chat_with_name=receiver_name,
+                           receiver_id=receiver_id)
 
+# --- កែប្រែការផ្ញើសារឱ្យមាន Receiver ---
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if 'user_id' not in session:
@@ -92,58 +109,23 @@ def send_message():
     
     data = request.get_json()
     message_text = data.get('message')
+    receiver_id = data.get('receiver_id') # ទទួល ID អ្នកទទួល
     
     if message_text:
         db = get_db()
-        db.execute('INSERT INTO messages (sender_id, message) VALUES (?, ?)',
-                   (session['user_id'], message_text))
+        db.execute('INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)',
+                   (session['user_id'], receiver_id, message_text))
         db.commit()
         return jsonify({"status": "sent"}), 200
     return jsonify({"status": "empty"}), 400
 
-@app.route('/search', methods=['POST'])
-def search_user():
-    username = request.form.get('username')
-    db = get_db()
-    user = db.execute('SELECT username, name FROM users WHERE username = ?', (username,)).fetchone()
-    if user:
-        return jsonify({"status": "found", "name": user['name'], "username": user['username']})
-    return jsonify({"status": "not_found"})
-
-# --- ROUTES ថ្មី (Settings & Update Profile) ---
-
-@app.route('/settings')
-def settings():
-    if 'user_id' not in session:
-        return redirect(url_for('welcome'))
-    return render_template('settings.html', user_name=session['user_name'], username=session['username'])
-
-@app.route('/update_profile', methods=['POST'])
-def update_profile():
-    if 'user_id' not in session:
-        return redirect(url_for('welcome'))
-    
-    new_name = request.form.get('name')
-    user_id = session['user_id']
-    
-    db = get_db()
-    db.execute('UPDATE users SET name = ? WHERE id = ?', (new_name, user_id))
-    db.commit()
-    
-    session['user_name'] = new_name 
-    return redirect(url_for('chat'))
-
-# --- មុខងារថ្មី៖ ស្វែងរកមិត្តភក្តិ (មិនឱ្យឃើញខ្លួនឯង) ---
-
 @app.route('/search_friend', methods=['POST'])
 def search_friend():
     if 'user_id' not in session:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
-        
-    query = request.form.get('username').replace('@', '') 
-    db = get_db()
+        return jsonify({"status": "error"}), 401
     
-    # ស្វែងរកមិត្តភក្តិតាម username (មិនឱ្យស្វែងរកឃើញខ្លួនឯងទេ)
+    query = request.form.get('username', '').replace('@', '').strip()
+    db = get_db()
     user = db.execute('SELECT id, username, name FROM users WHERE username = ? AND id != ?', 
                       (query, session['user_id'])).fetchone()
     
@@ -155,6 +137,12 @@ def search_friend():
             "username": user['username']
         })
     return jsonify({"status": "not_found"})
+
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        return redirect(url_for('welcome'))
+    return render_template('settings.html', user_name=session['user_name'], username=session['username'])
 
 @app.route('/logout')
 def logout():
