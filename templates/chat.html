@@ -1,96 +1,73 @@
-<script>
-    // --- ១. ប្រកាស Variables សំខាន់ៗ ---
-    const msgBox = document.getElementById('msgBox');
-    const msgInput = document.getElementById('msgInput');
-    const sendBtn = document.querySelector('.send-btn');
-    const userSearch = document.getElementById('userSearch'); // ឬ searchInput
-    const searchResult = document.getElementById('searchResult'); // ឬ resultBox
-
-    // បង្កើត Variable សកលដើម្បីទុក ID អ្នកទទួល
-    const urlParams = new URLSearchParams(window.location.search);
-    window.currentReceiverId = urlParams.get('uid') || null;
-
-    // --- ២. មុខងារស្វែងរកមិត្តភក្តិ (បូកបញ្ចូលគ្នា) ---
-    userSearch.addEventListener('input', function() {
-        // លុប @ ចេញ និងលុបចន្លោះទំនេរ (យកតាមកូដថ្មីរបស់អ្នក)
-        let query = this.value.trim().replace('@', '');
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* ប្តូរពី 100vh មកប្រើ dvh (Dynamic Viewport Height) ដើម្បីដោះស្រាយបញ្ហា iPhone */
+        body { margin: 0; background: #0e1621; font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         
-        if (query.length > 2) {
-            let formData = new FormData();
-            formData.append('username', query);
-
-            fetch('/search_friend', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                searchResult.style.display = 'block';
-                if (data.status === "found") {
-                    document.getElementById('resultInfo').style.display = 'flex';
-                    document.getElementById('noResult').style.display = 'none';
-                    document.getElementById('resName').innerText = data.name;
-                    document.getElementById('resUser').innerText = '@' + data.username;
-                    document.getElementById('resAvatar').innerText = data.name[0].toUpperCase();
-                    
-                    // ពេលចុចប៊ូតុង "ជជែក"
-                    document.getElementById('addContactBtn').onclick = () => {
-                        window.currentReceiverId = data.id; 
-                        
-                        // ប្តូរឈ្មោះនៅលើ Header
-                        const chatTitle = document.getElementById('chatWithTitle') || document.querySelector('.header-left div[style*="font-size: 14px"]');
-                        if (chatTitle) chatTitle.innerText = data.name;
-                        
-                        // កែប្រែ URL ដោយមិនចាំបាច់ Reload ទំព័រ
-                        window.history.pushState({}, '', `/chat?uid=${data.id}`);
-                        
-                        // លាងសារចាស់ចេញពី msgBox (តាមកូដថ្មី)
-                        msgBox.innerHTML = ""; 
-
-                        // បិទប្រអប់ Search
-                        searchResult.style.display = 'none';
-                        userSearch.value = "";
-
-                        // Reload ដើម្បីឱ្យ server ទាញសារបុគ្គលមក (រក្សាមុខងារកូដចាស់ដែលអ្នកត្រូវការ)
-                        location.reload(); 
-                    };
-                } else {
-                    document.getElementById('resultInfo').style.display = 'none';
-                    document.getElementById('noResult').style.display = 'block';
-                }
-            })
-            .catch(err => console.error("Error searching:", err));
-        } else {
-            searchResult.style.display = 'none';
+        .chat-header { 
+            background: #17212b; padding: 10px 15px; 
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #0e1621;
         }
-    });
-
-    // ចុចខាងក្រៅដើម្បីបិទប្រអប់លទ្ធផល
-    document.addEventListener('click', (e) => {
-        if (!userSearch.contains(e.target) && !searchResult.contains(e.target)) {
-            searchResult.style.display = 'none';
-        }
-    });
-
-    // --- ៣. មុខងារផ្ញើសារ (One-by-One) ---
-    function sendMessage() {
-        const text = msgInput.value.trim();
         
-        if (text === "") return;
-        if (!window.currentReceiverId) {
-            alert("សូមស្វែងរក និងជ្រើសរើសមិត្តភក្តិដើម្បីជជែកជាមុនសិន!");
-            return;
+        .search-container { flex: 1; display: flex; justify-content: center; padding: 0 10px; }
+        .search-container input { 
+            width: 100%; max-width: 200px; padding: 8px 15px; 
+            border-radius: 20px; border: none; background: #242f3d; color: white; outline: none; font-size: 14px;
         }
 
-        fetch('/send_message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                message: text,
-                receiver_id: window.currentReceiverId 
-            })
-        }).then(res => {
-            if (res.ok) {
+        .messages { 
+            flex: 1; padding: 15px; overflow-y: auto; 
+            display: flex; flex-direction: column;
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-size: cover;
+            /* ជំនួយដល់ការ scroll លើ iOS */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* បន្ថែម padding ខាងក្រោមសម្រាប់ iPhone ដែលមានរបារខាងក្រោម */
+        .input-area { 
+            background: #17212b; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            display: flex; align-items: center; gap: 10px; 
+        }
+        .input-area input { 
+            flex: 1; background: #242f3d; border: none; color: white; 
+            padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; 
+        }
+        
+        .profile-icon { width: 35px; height: 35px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; text-decoration: none; color: white; }
+    </style>
+</head>
+<body>
+    <div class="chat-header">
+        <a href="/settings" class="profile-icon">{{ user_name[0] | upper }}</a>
+        <div class="search-container">
+            <form action="/search" method="POST" style="width: 100%; display: flex; justify-content: center;">
+                <input type="text" name="username" placeholder="ស្វែងរក Username...">
+            </form>
+        </div>
+        <div style="width: 35px;"></div> </div>
+
+    <div class="messages" id="msgBox">
+        </div>
+
+    <div class="input-area">
+        <i class="far fa-smile" style="color: #808b99; font-size: 22px;"></i>
+        <input type="text" id="msgInput" placeholder="សរសេរសារ...">
+        <i class="fas fa-paper-plane send-btn" style="color: #2481cc; font-size: 22px; cursor: pointer;"></i>
+    </div>
+
+    <script>
+        const msgBox = document.getElementById('msgBox');
+        const msgInput = document.getElementById('msgInput');
+        const sendBtn = document.querySelector('.send-btn');
+
+        function sendMessage() {
+            const text = msgInput.value.trim();
+            if (text !== "") {
                 const msgDiv = document.createElement('div');
                 msgDiv.style = "background: #2b5278; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; align-self: flex-end; max-width: 75%; color: white; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2);";
                 msgDiv.innerHTML = text + `<div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>`;
@@ -99,12 +76,11 @@
                 msgInput.value = "";
                 msgBox.scrollTop = msgBox.scrollHeight;
             }
-        });
-    }
+        }
 
-    sendBtn.addEventListener('click', sendMessage);
-    msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        sendBtn.addEventListener('click', sendMessage);
+        msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+    </script>
+</body>
+</html>
 
-    // រុញ scroll ទៅក្រោមបំផុត
-    msgBox.scrollTop = msgBox.scrollHeight;
-</script>
