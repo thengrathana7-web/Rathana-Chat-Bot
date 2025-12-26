@@ -6,6 +6,7 @@ app = Flask(__name__)
 app.secret_key = 'rathana_secret_key'
 
 def get_db():
+    # ប្រើផ្លូវទៅកាន់ database.db
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
@@ -129,8 +130,31 @@ def update_profile():
     db.execute('UPDATE users SET name = ? WHERE id = ?', (new_name, user_id))
     db.commit()
     
-    session['user_name'] = new_name # Update ឈ្មោះក្នុង session ភ្លាមៗ
+    session['user_name'] = new_name 
     return redirect(url_for('chat'))
+
+# --- មុខងារថ្មី៖ ស្វែងរកមិត្តភក្តិ (មិនឱ្យឃើញខ្លួនឯង) ---
+
+@app.route('/search_friend', methods=['POST'])
+def search_friend():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+        
+    query = request.form.get('username').replace('@', '') 
+    db = get_db()
+    
+    # ស្វែងរកមិត្តភក្តិតាម username (មិនឱ្យស្វែងរកឃើញខ្លួនឯងទេ)
+    user = db.execute('SELECT id, username, name FROM users WHERE username = ? AND id != ?', 
+                      (query, session['user_id'])).fetchone()
+    
+    if user:
+        return jsonify({
+            "status": "found", 
+            "id": user['id'], 
+            "name": user['name'], 
+            "username": user['username']
+        })
+    return jsonify({"status": "not_found"})
 
 @app.route('/logout')
 def logout():
