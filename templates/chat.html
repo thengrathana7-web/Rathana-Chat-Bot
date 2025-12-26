@@ -19,7 +19,6 @@
             border-radius: 20px; border: none; background: #242f3d; color: white; outline: none; font-size: 14px; box-sizing: border-box;
         }
 
-        /* ប្រអប់បង្ហាញលទ្ធផលស្វែងរក */
         #searchResult {
             position: absolute; top: 45px; left: 0; right: 0;
             background: #17212b; border-radius: 10px; padding: 10px;
@@ -28,6 +27,17 @@
         .result-item { display: flex; align-items: center; gap: 10px; padding: 10px; cursor: pointer; border-radius: 8px; }
         .result-item:hover { background: #242f3d; }
         .res-avatar { width: 40px; height: 40px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        /* Contact List Bar */
+        #contactList { 
+            display: flex; overflow-x: auto; background: #17212b; 
+            padding: 10px; gap: 15px; border-bottom: 1px solid #0e1621; 
+            white-space: nowrap; scrollbar-width: none; /* លាក់ scrollbar លើ Firefox */
+        }
+        #contactList::-webkit-scrollbar { display: none; } /* លាក់ scrollbar លើ Chrome/Safari */
+        
+        .contact-item { text-align: center; cursor: pointer; min-width: 50px; }
+        .contact-avatar { width: 45px; height: 45px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; margin-bottom: 5px; }
 
         /* Message Area */
         .messages { 
@@ -52,28 +62,31 @@
 <body>
     <div class="chat-header">
         <a href="/settings" class="profile-icon">{{ user_name[0] | upper }}</a>
-        
         <div class="search-container">
-            <input type="number" id="userSearch" placeholder="ស្វែងរកលេខ ID ៦ខ្ទង់...">
-            
+            <input type="number" id="userSearch" placeholder="ស្វែងរកលេខ ID...">
             <div id="searchResult">
                 <div id="resultInfo" class="result-item">
                     <div class="res-avatar" id="resAvatar">?</div>
                     <div style="flex: 1;">
                         <div id="resName" style="font-weight: bold;"></div>
-                        <div id="resUser" style="font-size: 12px; color: #808b99;"></div>
+                        <div id="resUser" style="font-size: 11px; color: #808b99;"></div>
                     </div>
                     <button id="addContactBtn" style="background: #2481cc; border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer;">ជជែក</button>
                 </div>
                 <div id="noResult" style="padding: 10px; text-align: center; color: #8b99a8; display: none;">រកមិនឃើញ ID នេះទេ</div>
             </div>
         </div>
-
-        <div id="chatTitle" style="font-size: 14px; font-weight: bold; color: #2481cc; max-width: 80px; overflow: hidden; white-space: nowrap;">Global</div>
+        <div id="chatTitle" style="font-size: 13px; color: #2481cc; font-weight: bold;">Global</div>
     </div>
 
-    <div class="messages" id="msgBox">
+    <div id="contactList">
+        <div class="contact-item" onclick="location.reload()">
+            <div class="contact-avatar">G</div>
+            <div style="font-size: 10px; color: white;">Global</div>
         </div>
+        </div>
+
+    <div class="messages" id="msgBox"></div>
 
     <div class="input-area">
         <i class="far fa-smile" style="color: #808b99; font-size: 22px;"></i>
@@ -87,14 +100,14 @@
         const sendBtn = document.querySelector('.send-btn');
         const searchInput = document.getElementById('userSearch');
         const resultBox = document.getElementById('searchResult');
+        const contactList = document.getElementById('contactList');
         let refreshInterval = null; 
 
-        // ១. មុខងារទាញយកសារ និងបង្ហាញលើអេក្រង់
+        // មុខងារទាញយកសារ
         function loadChatHistory(receiverId) {
             fetch(`/get_messages/${receiverId}`)
                 .then(res => res.json())
                 .then(messages => {
-                    // បង្កើត HTML ថ្មីតែម្តង ដើម្បីកុំឱ្យញ័រអេក្រង់ពេល Refresh
                     let chatHTML = "";
                     messages.forEach(msg => {
                         const isMe = msg.sender_id == {{ session['user_id'] }};
@@ -106,7 +119,6 @@
                         chatHTML += `<div style="${style}">${msg.message} <div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${time}</div></div>`;
                     });
                     
-                    // ប្រៀបធៀបបើមានសារថ្មី ចាំ Update និង Scroll
                     if (msgBox.innerHTML !== chatHTML) {
                         msgBox.innerHTML = chatHTML;
                         msgBox.scrollTop = msgBox.scrollHeight;
@@ -114,13 +126,12 @@
                 });
         }
 
-        // ២. មុខងារស្វែងរក និងប៊ូតុង "ជជែក"
+        // មុខងារស្វែងរក និងបន្ថែមទៅរបារមិត្តភក្តិ
         searchInput.addEventListener('input', function() {
             let val = this.value.trim();
             if (val.length === 6) {
                 let fd = new FormData();
                 fd.append('username', val);
-
                 fetch('/search_friend', { method: 'POST', body: fd })
                 .then(res => res.json())
                 .then(data => {
@@ -133,27 +144,38 @@
                         document.getElementById('resAvatar').innerText = data.name[0].toUpperCase();
                         
                         document.getElementById('addContactBtn').onclick = function() {
-                            window.currentReceiverId = data.id; 
-                            document.getElementById('chatTitle').innerText = data.name; 
+                            startChatting(data.id, data.name);
                             resultBox.style.display = 'none';
                             searchInput.value = "";
-                            
-                            // ចាប់ផ្តើមទាញយកសារ និង Refresh រៀងរាល់ ៣ វិនាទី
-                            loadChatHistory(data.id);
-                            if(refreshInterval) clearInterval(refreshInterval);
-                            refreshInterval = setInterval(() => loadChatHistory(data.id), 3000);
                         };
                     } else {
                         document.getElementById('resultInfo').style.display = 'none';
                         document.getElementById('noResult').style.display = 'block';
                     }
                 });
-            } else {
-                resultBox.style.display = 'none';
-            }
+            } else { resultBox.style.display = 'none'; }
         });
 
-        // ៣. មុខងារផ្ញើសារ
+        // មុខងារចាប់ផ្តើម Chat និងបន្ថែមឈ្មោះទៅ Contact List
+        function startChatting(id, name) {
+            window.currentReceiverId = id;
+            document.getElementById('chatTitle').innerText = name;
+
+            // បន្ថែមទៅ Contact List បើមិនទាន់មាន
+            if (!document.getElementById('con-' + id)) {
+                const conItem = document.createElement('div');
+                conItem.id = 'con-' + id;
+                conItem.className = 'contact-item';
+                conItem.innerHTML = `<div class="contact-avatar" style="background:#32a852">${name[0].toUpperCase()}</div><div style="font-size:10px;color:white;">${name}</div>`;
+                conItem.onclick = () => startChatting(id, name);
+                contactList.appendChild(conItem);
+            }
+
+            loadChatHistory(id);
+            if(refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(() => loadChatHistory(id), 3000);
+        }
+
         function sendMessage() {
             const text = msgInput.value.trim();
             if (text !== "" && window.currentReceiverId) {
@@ -164,11 +186,9 @@
                 }).then(res => {
                     if (res.ok) {
                         msgInput.value = "";
-                        loadChatHistory(window.currentReceiverId); // Update ភ្លាមៗក្រោយផ្ញើ
+                        loadChatHistory(window.currentReceiverId);
                     }
                 });
-            } else if (!window.currentReceiverId) {
-                alert("សូមស្វែងរកមិត្តភក្តិតាម ID ដើម្បីជជែក!");
             }
         }
 
