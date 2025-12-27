@@ -1,6 +1,6 @@
 import os
 import sqlite3
-import random
+import random  # បន្ថែមសម្រាប់ generate user_id_number
 from datetime import timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
@@ -49,7 +49,61 @@ def init_db():
 
 init_db()
 
-# --- Route ពិសេសសម្រាប់ Update Database ចាស់ (កុំឱ្យបាត់ទិន្នន័យ) ---
+# --- មុខងារចុះឈ្មោះ (Register) - ថ្មី ---
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if 'user_id' in session:
+        return redirect(url_for('friend_list'))
+        
+    if request.method == 'POST':
+        name = request.form.get('name')
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        gender = request.form.get('gender')
+        
+        # បង្កើតលេខ ID 6 ខ្ទង់ដោយចៃដន្យ (ឧទាហរណ៍៖ 542312)
+        user_id_number = random.randint(100000, 999999)
+        
+        db = get_db()
+        try:
+            db.execute('''
+                INSERT INTO users (username, name, gender, email, password, user_id_number) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (username, name, gender, email, password, user_id_number))
+            db.commit()
+            
+            # បន្ទាប់ពីចុះឈ្មោះរួច ឱ្យវា Login ចូលតែម្តង
+            user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+            session.permanent = True
+            session['user_id'] = user['id']
+            session['user_name'] = user['name']
+            
+            return redirect(url_for('friend_list'))
+        except sqlite3.IntegrityError:
+            return "ឈ្មោះអ្នកប្រើ (Username) ឬ អ៊ីមែល នេះមានគេប្រើរួចហើយ!"
+            
+    return render_template('register.html')
+
+# --- មុខងារ Login (បន្ថែមដើម្បីឱ្យគ្រប់គ្រាន់) ---
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE username = ? AND password = ?', 
+                     (username, password)).fetchone()
+    
+    if user:
+        session.permanent = True
+        session['user_id'] = user['id']
+        session['user_name'] = user['name']
+        return redirect(url_for('friend_list'))
+    else:
+        return "ឈ្មោះអ្នកប្រើ ឬ លេខសម្ងាត់មិនត្រឹមត្រូវ!"
+
+# --- Route ពិសេសសម្រាប់ Update Database ចាស់ ---
 @app.route('/upgrade_database')
 def upgrade_database():
     db = get_db()
@@ -115,8 +169,7 @@ def chat():
     return render_template('chat.html', user_name=session['user_name'], old_messages=messages,
                            chat_with_name=chat_with_name, receiver_id=receiver_id)
 
-# --- មុខងារផ្ញើសារ (Text & Media) ---
-
+# --- មុខងារផ្ញើសារ ---
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if 'user_id' not in session: return jsonify({"status": "error"}), 403
@@ -135,19 +188,14 @@ def send_message():
 @app.route('/send_media', methods=['POST'])
 def send_media():
     if 'user_id' not in session: return jsonify({"status": "error"}), 403
-    
     receiver_id = request.form.get('receiver_id')
-    msg_type = request.form.get('type') # 'image', 'video', ឬ 'audio'
+    msg_type = request.form.get('type')
     file = request.files.get('file')
-    
     if file:
-        # បង្កើតឈ្មោះ file សុវត្ថិភាព
         filename = secure_filename(f"{msg_type}_{random.randint(1000,9999)}_{file.filename}")
         path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(path)
-        
         db = get_db()
-        # រក្សាទុកក្នុង DB (បន្ថែម is_read = 0 ដើម្បីឱ្យត្រូវជាមួយមុខងារ Notification)
         db.execute('''
             INSERT INTO messages (sender_id, receiver_id, msg_type, file_path, is_read) 
             VALUES (?, ?, ?, ?, 0)
@@ -156,7 +204,6 @@ def send_media():
         return jsonify({"status": "sent", "file": filename})
     return jsonify({"status": "error"}), 400
 
-# --- Settings & Profile Update ---
 @app.route('/settings')
 def settings():
     if 'user_id' not in session: return redirect(url_for('welcome'))
