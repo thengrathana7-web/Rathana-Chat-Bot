@@ -49,17 +49,16 @@ def init_db():
 
 init_db()
 
-# --- មុខងារចុះឈ្មោះ (Register) - បច្ចុប្បន្នភាពថ្មី ---
+# --- មុខងារចុះឈ្មោះ (Register) - បច្ចុប្បន្នភាពថ្មីតាមសំណូមពរ ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if 'user_id' in session:
         return redirect(url_for('friend_list'))
         
     if request.method == 'POST':
-        # ទទួលទិន្នន័យពី Form ក្នុង register.html
         name = request.form.get('name')
-        username = request.form.get('username')
-        email = request.form.get('email')
+        username = request.form.get('username').strip() # បន្ថែម .strip() ដើម្បីលុប Space
+        email = request.form.get('email').strip()       # បន្ថែម .strip() ដើម្បីលុប Space
         password = request.form.get('password')
         gender = request.form.get('gender')
         
@@ -81,8 +80,10 @@ def register():
             session['user_name'] = user['name']
             
             return redirect(url_for('friend_list'))
+            
         except sqlite3.IntegrityError:
-            return "ឈ្មោះអ្នកប្រើ (Username) ឬ អ៊ីមែល នេះមានគេប្រើរួចហើយ!"
+            # បង្ហាញសារជាភាសាខ្មែរឱ្យចំបញ្ហា និង Alert ប្រាប់អ្នកប្រើ
+            return "<script>alert('ឈ្មោះអ្នកប្រើ ឬ អ៊ីមែលនេះមានគេប្រើរួចហើយ! សូមប្តូរថ្មី។'); window.location='/register';</script>"
         except Exception as e:
             return f"មានបញ្ហាក្នុងការចុះឈ្មោះ៖ {str(e)}"
             
@@ -104,9 +105,9 @@ def login():
         session['user_name'] = user['name']
         return redirect(url_for('friend_list'))
     else:
-        return "ឈ្មោះអ្នកប្រើ ឬ លេខសម្ងាត់មិនត្រឹមត្រូវ!"
+        return "<script>alert('ឈ្មោះអ្នកប្រើ ឬ លេខសម្ងាត់មិនត្រឹមត្រូវ!'); window.location='/';</script>"
 
-# --- Routes សម្រាប់ Chat និង Friends ---
+# --- Routes ដើមសម្រាប់ Chat និង Friends ---
 @app.route('/')
 def welcome():
     if 'user_id' in session: return redirect(url_for('friend_list'))
@@ -127,7 +128,6 @@ def chat():
     if not receiver_id: return redirect(url_for('friend_list'))
     
     db = get_db()
-    # កំណត់ថាបានអានសាររួច
     db.execute('UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ?', 
                (receiver_id, session['user_id']))
     db.commit()
@@ -150,7 +150,7 @@ def get_messages(receiver_id):
     ''', (session['user_id'], receiver_id, receiver_id, session['user_id'])).fetchall()
     return jsonify([dict(msg) for msg in messages])
 
-# --- មុខងារផ្ញើសារ (Text, Image, Audio, Video) ---
+# --- មុខងារផ្ញើសារ និង Media ---
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if 'user_id' not in session: return jsonify({"status": "error"}), 403
@@ -181,7 +181,6 @@ def send_media():
         return jsonify({"status": "sent", "file": filename})
     return jsonify({"status": "error"}), 400
 
-# --- មុខងារ Settings និង Profile ---
 @app.route('/settings')
 def settings():
     if 'user_id' not in session: return redirect(url_for('welcome'))
