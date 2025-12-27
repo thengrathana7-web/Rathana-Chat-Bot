@@ -49,31 +49,29 @@ def init_db():
 
 init_db()
 
-# --- មុខងារចុះឈ្មោះ (Register) - បច្ចុប្បន្នភាពថ្មីតាមសំណូមពរ ---
+# --- មុខងារចុះឈ្មោះ (Register) - បច្ចុប្បន្នភាពថ្មី និងរឹងមាំបំផុត ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if 'user_id' in session:
         return redirect(url_for('friend_list'))
         
     if request.method == 'POST':
-        name = request.form.get('name')
-        username = request.form.get('username').strip() # បន្ថែម .strip() ដើម្បីលុប Space
-        email = request.form.get('email').strip()       # បន្ថែម .strip() ដើម្បីលុប Space
-        password = request.form.get('password')
-        gender = request.form.get('gender')
-        
-        # បង្កើត ID 6 ខ្ទង់ដោយចៃដន្យ
-        user_id_number = random.randint(100000, 999999)
-        
-        db = get_db()
         try:
+            name = request.form.get('name')
+            username = request.form.get('username').strip()
+            email = request.form.get('email').strip()
+            password = request.form.get('password')
+            gender = request.form.get('gender')
+            
+            user_id_number = random.randint(100000, 999999)
+            
+            db = get_db()
             db.execute('''
                 INSERT INTO users (username, name, gender, email, password, user_id_number) 
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (username, name, gender, email, password, user_id_number))
             db.commit()
             
-            # ចុះឈ្មោះរួច ឱ្យ Login ចូលតែម្តង
             user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
             session.permanent = True
             session['user_id'] = user['id']
@@ -81,11 +79,14 @@ def register():
             
             return redirect(url_for('friend_list'))
             
+        except sqlite3.OperationalError as e:
+            # បើខុសដោយសារ Database មិនទាន់មាន Column ថ្មី
+            return f"កំហុស Database: {str(e)} (សូមសាកល្បងលុប file database.db ហើយ Restart Server)"
         except sqlite3.IntegrityError:
-            # បង្ហាញសារជាភាសាខ្មែរឱ្យចំបញ្ហា និង Alert ប្រាប់អ្នកប្រើ
-            return "<script>alert('ឈ្មោះអ្នកប្រើ ឬ អ៊ីមែលនេះមានគេប្រើរួចហើយ! សូមប្តូរថ្មី។'); window.location='/register';</script>"
+            # ករណីមាន Username ឬ Email រួចហើយ
+            return "<script>alert('ឈ្មោះអ្នកប្រើ ឬ អ៊ីមែលនេះមានគេប្រើរួចហើយ!'); window.location='/register';</script>"
         except Exception as e:
-            return f"មានបញ្ហាក្នុងការចុះឈ្មោះ៖ {str(e)}"
+            return f"មានបញ្ហាមិនរំពឹងទុក៖ {str(e)}"
             
     return render_template('register.html')
 
