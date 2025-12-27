@@ -1,154 +1,121 @@
-<!DOCTYPE html>
-<html lang="km">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ចុះឈ្មោះគណនីថ្មី - Rathana Chat Bot</title>
-    <style>
-        :root {
-            --bg-dark: #0e1621;
-            --box-bg: #17212b;
-            --input-bg: #242f3d;
-            --primary-blue: #2481cc;
-            --text-white: #ffffff;
-            --text-gray: #b1b1b1;
-        }
+import os
+import sqlite3
+import random
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
-        body {
-            font-family: 'Segoe UI', 'Khmer OS Battambang', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-white);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
+app = Flask(__name__)
+app.secret_key = 'rathana_secret_key'
 
-        .register-container {
-            background: var(--box-bg);
-            padding: 2.5rem;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
+def get_db():
+    db_path = os.path.join(os.path.dirname(__file__), 'database.db')
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-        h2 { color: var(--text-white); margin-bottom: 0.5rem; font-size: 24px; }
-        p.subtitle { color: var(--text-gray); font-size: 14px; margin-bottom: 1.5rem; }
+def init_db():
+    with get_db() as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            user_id_number INTEGER UNIQUE, 
+            profile_pic TEXT DEFAULT 'default.png',
+            gender TEXT DEFAULT 'Male'
+        )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER,
+            receiver_id INTEGER,
+            message TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )''')
+    print("Database ready.")
 
-        .input-group { margin-bottom: 1.2rem; text-align: left; }
+init_db()
 
-        label { display: block; margin-bottom: 8px; color: var(--text-gray); font-size: 14px; }
+@app.route('/')
+def welcome():
+    if 'user_id' in session:
+        return redirect(url_for('chat'))
+    return render_template('welcome.html')
 
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid transparent;
-            border-radius: 10px;
-            background: var(--input-bg);
-            color: var(--text-white);
-            box-sizing: border-box;
-            font-size: 15px;
-            outline: none;
-            transition: 0.3s;
-            font-family: inherit;
-        }
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if 'user_id' in session: session.clear()
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        name = request.form['name'].strip()
+        email = request.form['email'].strip()
+        password = request.form['password']
+        gender = request.form.get('gender', 'Male') # ទទួលយកតម្លៃភេទពី Form
+        user_id_number = random.randint(100000, 999999)
+        
+        db = get_db()
+        try:
+            db.execute('''INSERT INTO users (username, name, email, password, gender, user_id_number) 
+                          VALUES (?, ?, ?, ?, ?, ?)''',
+                       (username, name, email, password, gender, user_id_number))
+            db.commit()
+            return redirect(url_for('welcome'))
+        except Exception as e:
+            print(f"Error: {e}")
+            return "<script>alert('ឈ្មោះអ្នកប្រើ ឬ អ៊ីមែលមានរួចហើយ!'); window.location='/register';</script>"
+    return render_template('register.html')
 
-        input:focus, select:focus {
-            border-color: var(--primary-blue);
-        }
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form['email'].strip()
+    password = request.form['password']
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password)).fetchone()
+    if user:
+        session['user_id'] = user['id']
+        session['user_name'] = user['name']
+        session['id_num'] = user['user_id_number']
+        return redirect(url_for('chat'))
+    return "<script>alert('ព័ត៌មានមិនត្រឹមត្រូវ!'); window.location='/';</script>"
 
-        /* បន្ថែមរចនាបថសម្រាប់ Select Option */
-        select option {
-            background: var(--box-bg);
-            color: var(--text-white);
-        }
+@app.route('/chat')
+def chat():
+    if 'user_id' not in session: return redirect(url_for('welcome'))
+    return render_template('chat.html', user_name=session['user_name'], id_num=session['id_num'])
 
-        button {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--primary-blue);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: 0.3s;
-        }
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session: return redirect(url_for('welcome'))
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+    return render_template('settings.html', user=user)
 
-        button:hover {
-            background-color: #1d6fa5;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(36, 129, 204, 0.3);
-        }
+@app.route('/update_settings', methods=['POST'])
+def update_settings():
+    if 'user_id' not in session: return redirect(url_for('welcome'))
+    new_name = request.form.get('name')
+    new_gender = request.form.get('gender')
+    
+    db = get_db()
+    db.execute('UPDATE users SET name = ?, gender = ? WHERE id = ?', (new_name, new_gender, session['user_id']))
+    db.commit()
+    session['user_name'] = new_name 
+    return redirect(url_for('settings'))
 
-        .footer-link { 
-            margin-top: 20px; 
-            font-size: 14px; 
-            color: var(--text-gray); 
-        }
+@app.route('/delete_account', methods=['POST'])
+def delete_account():
+    if 'user_id' not in session: return redirect(url_for('welcome'))
+    db = get_db()
+    db.execute('DELETE FROM users WHERE id = ?', (session['user_id'],))
+    db.execute('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', (session['user_id'], session['user_id']))
+    db.commit()
+    session.clear()
+    return redirect(url_for('welcome'))
 
-        .footer-link a { 
-            color: var(--primary-blue); 
-            text-decoration: none; 
-            font-weight: bold;
-        }
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('welcome'))
 
-        .footer-link a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-
-<div class="register-container">
-    <h2>បង្កើតគណនីថ្មី</h2>
-    <p class="subtitle">សូមបំពេញព័ត៌មានខាងក្រោមដើម្បីចាប់ផ្តើម</p>
-
-    <form action="/register" method="POST">
-        <div class="input-group">
-            <label>ឈ្មោះពេញ</label>
-            <input type="text" name="name" placeholder="ឧទាហរណ៍៖ រតនា" required>
-        </div>
-
-        <div class="input-group">
-            <label>ឈ្មោះអ្នកប្រើ (Username)</label>
-            <input type="text" name="username" placeholder="សម្រាប់ប្រើពេល Login" required>
-        </div>
-
-        <div class="input-group">
-            <label>ភេទ</label>
-            <select name="gender" required>
-                <option value="" disabled selected>ជ្រើសរើសភេទ</option>
-                <option value="Male">ប្រុស (Male)</option>
-                <option value="Female">ស្រី (Female)</option>
-                <option value="Other">ផ្សេងៗ</option>
-            </select>
-        </div>
-
-        <div class="input-group">
-            <label>អ៊ីមែល (Email)</label>
-            <input type="email" name="email" placeholder="បញ្ចូល Email ថ្មីរបស់អ្នក" required>
-        </div>
-
-        <div class="input-group">
-            <label>លេខសម្ងាត់</label>
-            <input type="password" name="password" placeholder="យ៉ាងតិច ៦ ខ្ទង់" required>
-        </div>
-
-        <button type="submit">ចុះឈ្មោះឥឡូវនេះ</button>
-    </form>
-
-    <div class="footer-link">
-        មានគណនីរួចហើយមែនទេ? <a href="/">ត្រឡប់ទៅ Login</a>
-    </div>
-</div>
-
-</body>
-</html>
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
