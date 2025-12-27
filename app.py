@@ -2,22 +2,27 @@ import os
 import sqlite3
 import random
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-# កំណត់ Secret Key ឱ្យមានសុវត្ថិភាពសម្រាប់ Session
+# កំណត់ Secret Key ឱ្យមានសុវត្ថិភាព
 app.secret_key = os.environ.get('SECRET_KEY', 'rathana_secure_key_2025')
 
-# មុខងារភ្ជាប់ទៅកាន់ Database
+# កំណត់ទីតាំងសម្រាប់រក្សារូបភាព Profile
+UPLOAD_FOLDER = 'static/uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 def get_db():
     db_path = os.path.join(os.path.dirname(__file__), 'database.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
-# មុខងារបង្កើតតារាង (Tables) ឱ្យត្រូវតាមតម្រូវការ Chat
 def init_db():
     with get_db() as conn:
-        # បង្កើតតារាងអ្នកប្រើប្រាស់ (Users)
+        # បង្កើតតារាង Users (បន្ថែម profile_pic)
         conn.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -25,10 +30,11 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             user_id_number INTEGER UNIQUE, 
-            gender TEXT DEFAULT 'Male'
+            gender TEXT DEFAULT 'Male',
+            profile_pic TEXT DEFAULT 'default.png'
         )''')
         
-        # បង្កើតតារាងសារ (Messages) - បន្ថែម msg_type និង file_path
+        # បង្កើតតារាង Messages
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
@@ -40,7 +46,6 @@ def init_db():
         )''')
     print("Database Initialized Successfully.")
 
-# ហៅមុខងារបង្កើត Database ភ្លាមៗពេល App ដំណើរការ
 init_db()
 
 # --- ROUTES ---
@@ -79,17 +84,14 @@ def register():
 def login():
     email = request.form.get('email', '').strip()
     password = request.form.get('password', '')
-    
     db = get_db()
     user = db.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password)).fetchone()
-    
     if user:
         session.clear()
         session['user_id'] = user['id']
         session['user_name'] = user['name']
         session['id_num'] = user['user_id_number']
         return redirect(url_for('chat'))
-    
     return "<script>alert('អ៊ីមែល ឬលេខសម្ងាត់មិនត្រឹមត្រូវ!'); window.location='/';</script>"
 
 @app.route('/chat')
@@ -98,7 +100,7 @@ def chat():
         return redirect(url_for('welcome'))
     return render_template('chat.html', user_name=session['user_name'], id_num=session.get('id_num'))
 
-# --- API FOR CHAT ---
+# --- API FOR CHAT & SEARCH ---
 
 @app.route('/get_messages/<int:receiver_id>')
 def get_messages(receiver_id):
@@ -129,9 +131,9 @@ def search_user(user_id_num):
     user = db.execute('SELECT id, name FROM users WHERE user_id_number = ?', (user_id_num,)).fetchone()
     if user:
         return jsonify({'id': user['id'], 'name': user['name']})
-    return jsonify({'error': 'Not found'})
+    return jsonify({'error': 'រកមិនឃើញ'})
 
-# --- SETTINGS ---
+# --- SETTINGS & PROFILE UPDATE ---
 
 @app.route('/settings')
 def settings():
@@ -140,16 +142,32 @@ def settings():
     user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
     return render_template('settings.html', user=user)
 
-@app.route('/update_settings', methods=['POST'])
-def update_settings():
+@app.route('/update_info', methods=['POST'])
+def update_info():
     if 'user_id' not in session: return redirect(url_for('welcome'))
-    new_name = request.form.get('name', '').strip()
-    new_gender = request.form.get('gender', 'Male')
-    if new_name:
+    name = request.form.get('name', '').strip()
+    gender = request.form.get('gender', 'Male')
+    new_password = request.form.get('new_password', '').strip()
+    
+    db = get_db()
+    if new_password:
+        db.execute('UPDATE users SET name=?, gender=?, password=? WHERE id=?', (name, gender, new_password, session['user_id']))
+    else:
+        db.execute('UPDATE users SET name=?, gender=? WHERE id=?', (name, gender, session['user_id']))
+    db.commit()
+    session['user_name'] = name
+    return redirect(url_for('settings'))
+
+@app.route('/update_profile_pic', methods=['POST'])
+def update_profile_pic():
+    if 'user_id' not in session: return redirect(url_for('welcome'))
+    file = request.files.get('profile_pic')
+    if file:
+        filename = secure_filename(f"user_{session['user_id']}_{file.filename}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         db = get_db()
-        db.execute('UPDATE users SET name = ?, gender = ? WHERE id = ?', (new_name, new_gender, session['user_id']))
+        db.execute('UPDATE users SET profile_pic=? WHERE id=?', (filename, session['user_id']))
         db.commit()
-        session['user_name'] = new_name
     return redirect(url_for('settings'))
 
 @app.route('/logout')
