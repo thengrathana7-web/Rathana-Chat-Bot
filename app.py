@@ -9,11 +9,10 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "rathana_secret_123")
 app.permanent_session_lifetime = timedelta(days=30)
 
-# កំណត់ Folder សម្រាប់រក្សាទុករូបភាព (ប្រើ uploads តាមកូដចម្បងរបស់អ្នក)
+# កំណត់ Folder សម្រាប់រក្សារូបភាព
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# បង្កើត Folder បើមិនទាន់មាន
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -35,17 +34,34 @@ def init_db():
             user_id_number INTEGER UNIQUE, 
             profile_pic TEXT DEFAULT 'default.png'
         )''')
+        
+        # កែសម្រួល Table messages បន្ថែម msg_type និង file_path
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
             receiver_id INTEGER,
             message TEXT,
+            msg_type TEXT DEFAULT 'text', -- 'text', 'image', 'video', 'audio'
+            file_path TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             is_read INTEGER DEFAULT 0
         )''')
     print("Database Initialized Successfully.")
 
 init_db()
+
+# --- Route ពិសេសសម្រាប់ Update Database ចាស់ (កុំឱ្យបាត់ទិន្នន័យ) ---
+@app.route('/upgrade_database')
+def upgrade_database():
+    db = get_db()
+    try:
+        # បន្ថែម Column ថ្មីទៅក្នុង Table messages ដែលមានស្រាប់
+        db.execute("ALTER TABLE messages ADD COLUMN msg_type TEXT DEFAULT 'text'")
+        db.execute("ALTER TABLE messages ADD COLUMN file_path TEXT")
+        db.commit()
+        return "Database បាន Upgrade ជោគជ័យ!"
+    except Exception as e:
+        return f"Database ប្រហែលជាមាន Column ទាំងនេះរួចហើយ៖ {e}"
 
 # --- មុខងារ Notifications ---
 @app.route('/check_notifications')
@@ -88,6 +104,8 @@ def chat():
     db.commit()
     user = db.execute('SELECT name FROM users WHERE id = ?', (receiver_id,)).fetchone()
     chat_with_name = user['name'] if user else "Unknown"
+    
+    # ទាញយកសារទាំងអស់ (រួមទាំង msg_type និង file_path)
     messages = db.execute('''
         SELECT m.*, u.name as sender_name 
         FROM messages m 
@@ -96,10 +114,27 @@ def chat():
         OR (sender_id = ? AND receiver_id = ?)
         ORDER BY timestamp ASC
     ''', (session['user_id'], receiver_id, receiver_id, session['user_id'])).fetchall()
+    
     return render_template('chat.html', user_name=session['user_name'], old_messages=messages,
                            chat_with_name=chat_with_name, receiver_id=receiver_id)
 
-# --- មុខងារ Settings & Profile Update (Merged) ---
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    if 'user_id' not in session: return jsonify({"status": "error"}), 403
+    data = request.get_json()
+    
+    msg_type = data.get('msg_type', 'text') # default ជា text
+    file_path = data.get('file_path', None)
+    
+    db = get_db()
+    db.execute('''
+        INSERT INTO messages (sender_id, receiver_id, message, msg_type, file_path, is_read) 
+        VALUES (?, ?, ?, ?, ?, 0)
+    ''', (session['user_id'], data.get('receiver_id'), data.get('message'), msg_type, file_path))
+    db.commit()
+    return jsonify({"status": "sent"})
+
+# --- Settings & Profile Update ---
 @app.route('/settings')
 def settings():
     if 'user_id' not in session: return redirect(url_for('welcome'))
@@ -121,39 +156,20 @@ def update_info():
 @app.route('/update_profile_pic', methods=['POST'])
 def update_profile_pic():
     if 'user_id' not in session: return redirect(url_for('welcome'))
-    
-    # ពិនិត្យមើលឈ្មោះ field ឱ្យត្រូវជាមួយ HTML (ទាំង 'file' ឬ 'profile_pic')
     file = request.files.get('file') or request.files.get('profile_pic')
-    
     if file and file.filename != '':
-        # ប្តូរឈ្មោះឱ្យមានសុវត្ថិភាព និងកំណត់ទម្រង់ឱ្យនៅត្រឹមត្រូវ
         ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
         filename = secure_filename(f"user_{session['user_id']}.{ext}")
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        
         db = get_db()
         db.execute('UPDATE users SET profile_pic = ? WHERE id = ?', (filename, session['user_id']))
         db.commit()
-        
     return redirect(url_for('settings'))
-
-@app.route('/send_message', methods=['POST'])
-def send_message():
-    if 'user_id' not in session: return jsonify({"status": "error"}), 403
-    data = request.get_json()
-    db = get_db()
-    db.execute('INSERT INTO messages (sender_id, receiver_id, message, is_read) VALUES (?, ?, ?, 0)',
-               (session['user_id'], data.get('receiver_id'), data.get('message')))
-    db.commit()
-    return jsonify({"status": "sent"})
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('welcome'))
-
-# បន្ថែម Route សម្រាប់ Register/Login តាមកូដដើមរបស់អ្នក...
-# (សូមប្រាកដថាអ្នកនៅរក្សាទុក routes ទាំងនោះ)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
