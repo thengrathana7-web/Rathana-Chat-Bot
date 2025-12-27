@@ -4,15 +4,17 @@ import random
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
-# កំណត់ Secret Key ឱ្យមានសុវត្ថិភាព
-app.secret_key = os.environ.get('SECRET_KEY', 'rathana_chat_bot_2025_secure')
+# កំណត់ Secret Key ឱ្យមានសុវត្ថិភាពសម្រាប់ Session
+app.secret_key = os.environ.get('SECRET_KEY', 'rathana_secure_key_2025')
 
+# មុខងារភ្ជាប់ទៅកាន់ Database
 def get_db():
     db_path = os.path.join(os.path.dirname(__file__), 'database.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
+# មុខងារបង្កើតតារាង (Tables) ឱ្យត្រូវតាមតម្រូវការ Chat
 def init_db():
     with get_db() as conn:
         # បង្កើតតារាងអ្នកប្រើប្រាស់ (Users)
@@ -26,7 +28,7 @@ def init_db():
             gender TEXT DEFAULT 'Male'
         )''')
         
-        # បង្កើតតារាងសារ (Messages) - កែសម្រួលតាមតម្រូវការ chat.html
+        # បង្កើតតារាងសារ (Messages) - បន្ថែម msg_type និង file_path
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
@@ -36,12 +38,12 @@ def init_db():
             file_path TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )''')
-    print("Database រៀបចំរួចរាល់!")
+    print("Database Initialized Successfully.")
 
-# ហៅមុខងារបង្កើត Database
+# ហៅមុខងារបង្កើត Database ភ្លាមៗពេល App ដំណើរការ
 init_db()
 
-# --- ROUTES សម្រាប់ទំព័រទូទៅ ---
+# --- ROUTES ---
 
 @app.route('/')
 def welcome():
@@ -77,14 +79,17 @@ def register():
 def login():
     email = request.form.get('email', '').strip()
     password = request.form.get('password', '')
+    
     db = get_db()
     user = db.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password)).fetchone()
+    
     if user:
         session.clear()
         session['user_id'] = user['id']
         session['user_name'] = user['name']
         session['id_num'] = user['user_id_number']
         return redirect(url_for('chat'))
+    
     return "<script>alert('អ៊ីមែល ឬលេខសម្ងាត់មិនត្រឹមត្រូវ!'); window.location='/';</script>"
 
 @app.route('/chat')
@@ -93,7 +98,7 @@ def chat():
         return redirect(url_for('welcome'))
     return render_template('chat.html', user_name=session['user_name'], id_num=session.get('id_num'))
 
-# --- API សម្រាប់មុខងារ CHAT (សំខាន់សម្រាប់ឱ្យ chat.html ដើរ) ---
+# --- API FOR CHAT ---
 
 @app.route('/get_messages/<int:receiver_id>')
 def get_messages(receiver_id):
@@ -109,7 +114,7 @@ def get_messages(receiver_id):
 
 @app.route('/send_message', methods=['POST'])
 def send_message():
-    if 'user_id' not in session: return jsonify({'status': 'unauthorized'})
+    if 'user_id' not in session: return jsonify({'status': 'error'})
     data = request.json
     db = get_db()
     db.execute('''INSERT INTO messages (sender_id, receiver_id, message, msg_type) 
@@ -124,22 +129,20 @@ def search_user(user_id_num):
     user = db.execute('SELECT id, name FROM users WHERE user_id_number = ?', (user_id_num,)).fetchone()
     if user:
         return jsonify({'id': user['id'], 'name': user['name']})
-    return jsonify({'error': 'រកមិនឃើញ'})
+    return jsonify({'error': 'Not found'})
 
-# --- មុខងារ SETTINGS ---
+# --- SETTINGS ---
 
 @app.route('/settings')
 def settings():
-    if 'user_id' not in session:
-        return redirect(url_for('welcome'))
+    if 'user_id' not in session: return redirect(url_for('welcome'))
     db = get_db()
     user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
     return render_template('settings.html', user=user)
 
 @app.route('/update_settings', methods=['POST'])
 def update_settings():
-    if 'user_id' not in session:
-        return redirect(url_for('welcome'))
+    if 'user_id' not in session: return redirect(url_for('welcome'))
     new_name = request.form.get('name', '').strip()
     new_gender = request.form.get('gender', 'Male')
     if new_name:
@@ -147,19 +150,7 @@ def update_settings():
         db.execute('UPDATE users SET name = ?, gender = ? WHERE id = ?', (new_name, new_gender, session['user_id']))
         db.commit()
         session['user_name'] = new_name
-        return redirect(url_for('settings'))
-    return "<script>alert('ឈ្មោះមិនអាចទទេបានទេ!'); window.location='/settings';</script>"
-
-@app.route('/delete_account', methods=['POST'])
-def delete_account():
-    if 'user_id' not in session:
-        return redirect(url_for('welcome'))
-    db = get_db()
-    db.execute('DELETE FROM users WHERE id = ?', (session['user_id'],))
-    db.execute('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', (session['user_id'], session['user_id']))
-    db.commit()
-    session.clear()
-    return redirect(url_for('welcome'))
+    return redirect(url_for('settings'))
 
 @app.route('/logout')
 def logout():
