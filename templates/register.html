@@ -27,7 +27,6 @@
         }
         h2 { margin-bottom: 25px; color: #fff; font-size: 24px; }
         
-        /* រចនាប្រអប់បញ្ចូលទិន្នន័យ */
         .input-box {
             text-align: left;
             margin-bottom: 15px;
@@ -48,7 +47,6 @@
         }
         input:focus, select:focus { border-color: #2481cc; }
 
-        /* ប៊ូតុង Register */
         button { 
             width: 100%; 
             padding: 14px; 
@@ -64,7 +62,6 @@
         }
         button:hover { background: #3294e6; }
 
-        /* មុខងារ "ចងចាំខ្ញុំ" */
         .remember-me {
             display: flex;
             align-items: center;
@@ -85,17 +82,22 @@
         <h2>បង្កើតគណនីថ្មី</h2>
         <form action="/register" method="POST">
             <div class="input-box">
-                <label>ឈ្មោះពេញ</label>
-                <input type="text" name="name" placeholder="បញ្ជូលឈ្មោះរបស់អ្នក" required>
+                <label>ឈ្មោះពេញ (Display Name)</label>
+                <input type="text" name="name" placeholder="បញ្ចូលឈ្មោះបង្ហាញរបស់អ្នក" required>
+            </div>
+
+            <div class="input-box">
+                <label>ឈ្មោះអ្នកប្រើ (Username សម្រាប់ Login)</label>
+                <input type="text" name="username" placeholder="ឧទាហរណ៍៖ rathana123" required>
             </div>
 
             <div class="input-box">
                 <label>ភេទ</label>
                 <select name="gender" required>
                     <option value="" disabled selected>ជ្រើសរើសភេទ</option>
-                    <option value="male">ប្រុស (Male)</option>
-                    <option value="female">ស្រី (Female)</option>
-                    <option value="other">ផ្សេងៗ</option>
+                    <option value="ប្រុស">ប្រុស (Male)</option>
+                    <option value="ស្រី">ស្រី (Female)</option>
+                    <option value="ផ្សេងៗ">ផ្សេងៗ</option>
                 </select>
             </div>
 
@@ -110,10 +112,10 @@
             </div>
 
             <label class="remember-me">
-                <input type="checkbox" name="remember" checked> រក្សាទុកការចូលប្រើ (កុំឱ្យ Login ម្ដងទៀត)
+                <input type="checkbox" name="remember" checked> រក្សាទុកការចូលប្រើ
             </label>
 
-            <button type="submit">Register</button>
+            <button type="submit">ចុះឈ្មោះឥឡូវនេះ</button>
         </form>
 
         <a href="/">មានគណនីរួចហើយ? ត្រឡប់ទៅការ Login</a>
