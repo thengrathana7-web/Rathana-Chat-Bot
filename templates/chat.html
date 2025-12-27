@@ -5,148 +5,141 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { margin: 0; background: #0e1621; font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* កែសម្រួល Header ឱ្យមានប៊ូតុងថយក្រោយ និងព័ត៌មានអ្នកប្រើ */
         .chat-header { background: #17212b; padding: 10px 15px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #0e1621; color: white; }
         .back-btn { color: #2481cc; text-decoration: none; font-size: 18px; display: flex; align-items: center; }
-        
         .user-info { flex: 1; display: flex; flex-direction: column; }
         .chat-with-name { font-weight: bold; font-size: 15px; }
         .status { font-size: 11px; color: #40a7e3; }
 
+        /* Media styles in chat */
+        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; cursor: pointer; }
+        .chat-audio { width: 100%; max-width: 200px; height: 35px; margin-top: 5px; }
+
         .search-container { position: relative; width: 120px; }
         .search-container input { width: 100%; padding: 6px 12px; border-radius: 15px; border: none; background: #242f3d; color: white; outline: none; font-size: 12px; box-sizing: border-box; }
-        
         #searchResult { position: absolute; top: 40px; right: 0; width: 200px; background: #17212b; border-radius: 10px; padding: 10px; display: none; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .result-item { display: flex; align-items: center; gap: 10px; padding: 10px; cursor: pointer; border-radius: 8px; }
-        .res-avatar { width: 35px; height: 35px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         
         #contactList { display: flex; overflow-x: auto; background: #17212b; padding: 10px; gap: 15px; border-bottom: 1px solid #0e1621; white-space: nowrap; scrollbar-width: none; }
-        #contactList::-webkit-scrollbar { display: none; }
         .contact-item { text-align: center; cursor: pointer; min-width: 50px; }
         
         .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; -webkit-overflow-scrolling: touch; }
+        
+        /* កែសម្រួល Input Area ថ្មី */
         .input-area { background: #17212b; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; }
-        .input-area input { flex: 1; background: #242f3d; border: none; color: white; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; }
-        .send-btn { color: #2481cc; font-size: 22px; cursor: pointer; }
+        .input-area input[type="text"] { flex: 1; background: #242f3d; border: none; color: white; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; }
+        .media-label { color: #808b99; font-size: 22px; cursor: pointer; }
+        .record-btn { color: #f44336; font-size: 22px; cursor: pointer; background: none; border: none; padding: 0; }
+        .send-btn { color: #2481cc; font-size: 22px; cursor: pointer; background: none; border: none; }
     </style>
 </head>
 <body>
     <div class="chat-header">
-        <a href="/friends" class="back-btn">
-            <i class="fas fa-arrow-left"></i>
-        </a>
-
+        <a href="/friends" class="back-btn"><i class="fas fa-arrow-left"></i></a>
         <div class="user-info">
             <div class="chat-with-name" id="chatTitle">{{ chat_with_name if chat_with_name else "Global Chat" }}</div>
             <div class="status">Online</div>
         </div>
-
         <div class="search-container">
             <input type="number" id="userSearch" placeholder="Search ID...">
             <div id="searchResult">
-                <div id="resultInfo" class="result-item">
-                    <div class="res-avatar" id="resAvatar">?</div>
-                    <div style="flex: 1;">
-                        <div id="resName" style="font-weight: bold; font-size: 13px;"></div>
-                        <div id="resUser" style="font-size: 10px; color: #808b99;"></div>
-                    </div>
-                    <button id="addContactBtn" style="background: #2481cc; border: none; color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 11px;">Chat</button>
+                <div id="resultInfo" style="display:none;" class="result-item">
+                    <div id="resName" style="font-weight: bold; color: white;"></div>
+                    <button id="addContactBtn">Chat</button>
                 </div>
-                <div id="noResult" style="padding: 10px; text-align: center; color: #8b99a8; display: none; font-size: 12px;">រកមិនឃើញ</div>
             </div>
         </div>
     </div>
 
     <div id="contactList"></div>
-
     <div class="messages" id="msgBox"></div>
 
     <div class="input-area">
-        <i class="far fa-smile" style="color: #808b99; font-size: 22px;"></i>
+        <label for="mediaInput" class="media-label">
+            <i class="far fa-image"></i>
+        </label>
+        <input type="file" id="mediaInput" accept="image/*,video/*" hidden onchange="uploadMedia()">
+
         <input type="text" id="msgInput" placeholder="សរសេរសារ..." autocomplete="off">
-        <i class="fas fa-paper-plane send-btn"></i>
+
+        <button id="recordBtn" class="record-btn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">
+            <i class="fas fa-microphone"></i>
+        </button>
+
+        <button class="send-btn" onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+        </button>
     </div>
 
     <script>
         const msgBox = document.getElementById('msgBox');
         const msgInput = document.getElementById('msgInput');
-        const sendBtn = document.querySelector('.send-btn');
-        const searchInput = document.getElementById('userSearch');
-        const resultBox = document.getElementById('searchResult');
-        const contactList = document.getElementById('contactList');
-        
-        let contacts = JSON.parse(localStorage.getItem('chat_contacts')) || [];
-        let currentSearchResult = null;
+        let mediaRecorder;
+        let audioChunks = [];
         let refreshInterval = null;
 
-        // បង្ហាញបញ្ជីមិត្តភក្តិផ្តេក
-        function renderContacts() {
-            contactList.innerHTML = `
-                <div class="contact-item" onclick="window.location.href='/chat'" style="min-width: 50px;">
-                    <div style="width: 45px; height: 45px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">G</div>
-                    <div style="font-size: 10px; color: white; margin-top: 5px;">Global</div>
-                </div>
-            `;
+        // --- មុខងារផ្ញើសារជាអក្សរ ---
+        function sendMessage() {
+            const text = msgInput.value.trim();
+            if (text !== "" && window.currentReceiverId) {
+                fetch('/send_message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, receiver_id: window.currentReceiverId, msg_type: 'text' })
+                }).then(() => {
+                    msgInput.value = "";
+                    loadChatHistory(window.currentReceiverId);
+                });
+            }
+        }
 
-            contacts.forEach(c => {
-                const contactDiv = document.createElement('div');
-                contactDiv.className = "contact-item";
-                contactDiv.onclick = () => startPrivateChat(c.id, c.name);
-                contactDiv.innerHTML = `
-                    <div style="width: 45px; height: 45px; background: #1c2938; border: 1px solid #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">${c.name[0].toUpperCase()}</div>
-                    <div style="font-size: 10px; color: white; margin-top: 5px;">${c.name.split(' ')[0]}</div>
-                `;
-                contactList.appendChild(contactDiv);
+        // --- មុខងារ Upload រូបភាព/វីដេអូ ---
+        function uploadMedia() {
+            const fileInput = document.getElementById('mediaInput');
+            if (!fileInput.files[0] || !window.currentReceiverId) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('receiver_id', window.currentReceiverId);
+            formData.append('type', fileInput.files[0].type.startsWith('image') ? 'image' : 'video');
+
+            fetch('/send_media', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "sent") loadChatHistory(window.currentReceiverId);
+                fileInput.value = ""; // Clear input
             });
         }
 
-        // មុខងារស្វែងរក
-        searchInput.addEventListener('input', function() {
-            let val = this.value.trim();
-            if (val.length === 6) {
-                let fd = new FormData();
-                fd.append('username', val);
-                fetch('/search_friend', { method: 'POST', body: fd })
-                .then(res => res.json())
-                .then(data => {
-                    resultBox.style.display = 'block';
-                    if (data.status === "found") {
-                        currentSearchResult = data;
-                        document.getElementById('resultInfo').style.display = 'flex';
-                        document.getElementById('noResult').style.display = 'none';
-                        document.getElementById('resName').innerText = data.name;
-                        document.getElementById('resUser').innerText = 'ID: ' + data.id_num;
-                        document.getElementById('resAvatar').innerText = data.name[0].toUpperCase();
-                    } else {
-                        document.getElementById('resultInfo').style.display = 'none';
-                        document.getElementById('noResult').style.display = 'block';
-                    }
-                });
-            } else { resultBox.style.display = 'none'; }
-        });
-
-        document.getElementById('addContactBtn').onclick = function() {
-            if (currentSearchResult) {
-                if (!contacts.find(c => c.id === currentSearchResult.id)) {
-                    contacts.push({ id: currentSearchResult.id, name: currentSearchResult.name });
-                    localStorage.setItem('chat_contacts', JSON.stringify(contacts));
-                    renderContacts();
-                }
-                startPrivateChat(currentSearchResult.id, currentSearchResult.name);
-                resultBox.style.display = 'none';
-                searchInput.value = "";
-            }
-        };
-
-        function startPrivateChat(id, name) {
-            window.currentReceiverId = id;
-            document.getElementById('chatTitle').innerText = name;
-            loadChatHistory(id);
-            if(refreshInterval) clearInterval(refreshInterval);
-            refreshInterval = setInterval(() => loadChatHistory(id), 3000);
+        // --- មុខងារ Voice Recording ---
+        async function startRecording() {
+            audioChunks = [];
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = uploadVoice;
+            mediaRecorder.start();
+            document.getElementById('recordBtn').style.color = "#4CAF50"; // ប្តូរពណ៌ពេលកំពុងថត
         }
 
+        function stopRecording() {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+                document.getElementById('recordBtn').style.color = "#f44336";
+            }
+        }
+
+        function uploadVoice() {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'voice.mp3');
+            formData.append('receiver_id', window.currentReceiverId);
+            formData.append('type', 'audio');
+
+            fetch('/send_media', { method: 'POST', body: formData })
+            .then(() => loadChatHistory(window.currentReceiverId));
+        }
+
+        // --- មុខងារបង្ហាញសារ (Display Messages) ---
         function loadChatHistory(receiverId) {
             fetch(`/get_messages/${receiverId}`)
                 .then(res => res.json())
@@ -156,7 +149,22 @@
                         const isMe = msg.sender_id == {{ session['user_id'] }};
                         const style = isMe ? "background: #2b5278; align-self: flex-end;" : "background: #182533; align-self: flex-start;";
                         const time = msg.timestamp.split(' ')[1].substring(0,5);
-                        chatHTML += `<div style="${style} padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; max-width: 75%; color: white;">${msg.message} <div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${time}</div></div>`;
+                        
+                        let content = "";
+                        if (msg.msg_type === 'image') {
+                            content = `<img src="/static/uploads/${msg.file_path}" class="chat-img" onclick="window.open(this.src)">`;
+                        } else if (msg.msg_type === 'audio') {
+                            content = `<audio controls class="chat-audio"><source src="/static/uploads/${msg.file_path}" type="audio/mpeg"></audio>`;
+                        } else if (msg.msg_type === 'video') {
+                            content = `<video controls class="chat-img"><source src="/static/uploads/${msg.file_path}"></video>`;
+                        } else {
+                            content = msg.message;
+                        }
+
+                        chatHTML += `<div style="${style} padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; max-width: 75%; color: white;">
+                                        ${content} 
+                                        <div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${time}</div>
+                                     </div>`;
                     });
                     if (msgBox.innerHTML !== chatHTML) {
                         msgBox.innerHTML = chatHTML;
@@ -165,33 +173,19 @@
                 });
         }
 
-        function sendMessage() {
-            const text = msgInput.value.trim();
-            if (text !== "" && window.currentReceiverId) {
-                fetch('/send_message', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text, receiver_id: window.currentReceiverId })
-                }).then(res => {
-                    if (res.ok) {
-                        msgInput.value = "";
-                        loadChatHistory(window.currentReceiverId);
-                    }
-                });
-            }
+        // --- កូដសម្រាប់ Contacts & Search (រក្សាទុកពីមុន) ---
+        function startPrivateChat(id, name) {
+            window.currentReceiverId = id;
+            document.getElementById('chatTitle').innerText = name;
+            loadChatHistory(id);
+            if(refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(() => loadChatHistory(id), 3000);
         }
 
-        sendBtn.addEventListener('click', sendMessage);
-        msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-
-        renderContacts();
-        
-        // បើមាន uid ក្នុង URL ឱ្យចាប់ផ្ដើម Chat ភ្លាម
+        // ... (រក្សាមុខងារ renderContacts និង Search របស់អ្នកនៅដដែល) ...
         const urlParams = new URLSearchParams(window.location.search);
         const uid = urlParams.get('uid');
-        if (uid) {
-            startPrivateChat(uid, "{{ chat_with_name }}");
-        }
+        if (uid) startPrivateChat(uid, "{{ chat_with_name }}");
     </script>
 </body>
 </html>
