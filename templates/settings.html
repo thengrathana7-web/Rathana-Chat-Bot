@@ -11,9 +11,13 @@
         .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { color: #2481cc; text-decoration: none; font-size: 20px; margin-right: 15px; }
         .profile-card { background: #17212b; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .profile-section { position: relative; display: inline-block; margin-bottom: 20px; }
-        .profile-pic { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #2481cc; object-fit: cover; background: #242f3d; }
-        .upload-btn { position: absolute; bottom: 0; right: 0; background: #2481cc; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #17212b; }
+        
+        /* Profile Section ថ្មី - បញ្ចូលគ្នា */
+        .profile-section { position: relative; display: inline-block; margin-bottom: 20px; cursor: pointer; }
+        .profile-pic { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #2481cc; object-fit: cover; background: #242f3d; transition: 0.3s; }
+        .profile-pic:hover { opacity: 0.8; transform: scale(1.05); }
+        .camera-overlay { position: absolute; bottom: 5px; right: 5px; background: #2481cc; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 2px solid #17212b; pointer-events: none; }
+        
         .info-group { text-align: left; margin-bottom: 15px; background: #242f3d; padding: 12px; border-radius: 12px; border-left: 4px solid #2481cc; }
         .info-group label { display: block; font-size: 11px; color: #8ab4f8; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
         .info-group span, .info-group input, .info-group select { background: transparent; border: none; color: white; width: 100%; font-size: 16px; outline: none; }
@@ -21,6 +25,7 @@
         .copy-btn { background: rgba(36, 129, 204, 0.2); color: #2481cc; border: 1px solid #2481cc; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .btn-save { width: 100%; padding: 13px; background: #2481cc; border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-logout { width: 100%; padding: 13px; background: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; border-radius: 10px; font-weight: bold; margin-top: 15px; display: block; text-decoration: none; text-align: center; box-sizing: border-box; }
+        .upload-hint { font-size: 11px; color: #2481cc; margin-top: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -33,11 +38,14 @@
 
     <div class="profile-card">
         <form action="/update_profile_pic" method="POST" enctype="multipart/form-data" id="picForm">
-            <div class="profile-section">
-                <img src="/static/uploads/{{ user.profile_pic or 'default.png' }}" class="profile-pic" id="preview">
-                <label for="file-upload" class="upload-btn"><i class="fas fa-camera"></i></label>
+            <label for="file-upload" class="profile-section">
+                <img src="/static/uploads/{{ user.profile_pic or 'default.png' }}" class="profile-pic" id="preview" title="ចុចលើរូបដើម្បីប្តូរ">
+                <div class="camera-overlay">
+                    <i class="fas fa-camera" style="font-size: 12px; color: white;"></i>
+                </div>
                 <input id="file-upload" type="file" name="profile_pic" hidden onchange="document.getElementById('picForm').submit()">
-            </div>
+                <div class="upload-hint">ចុចលើរូបដើម្បីប្តូរ</div>
+            </label>
         </form>
 
         <form action="/update_info" method="POST">
@@ -70,7 +78,7 @@
             <button type="submit" class="btn-save">រក្សាទុកការផ្លាស់ប្តូរ</button>
         </form>
 
-        <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> ចាកចេញ</a>
+        <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> ចាកចេញ (Logout)</a>
     </div>
 </div>
 
