@@ -15,13 +15,14 @@ app.permanent_session_lifetime = timedelta(days=30)
 def get_db():
     # កំណត់ Path ឱ្យច្បាស់លាស់ដើម្បីកុំឱ្យបាត់ File Database ពេលនៅលើ Server
     db_path = os.path.join(os.path.dirname(__file__), 'database.db')
-    conn = sqlite3.connect(db_path)
+    # បន្ថែម timeout=20 ដើម្បីការពារកំហុស "database is locked"
+    conn = sqlite3.connect(db_path, timeout=20)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
     with get_db() as conn:
-        # បង្កើតតារាង users ប្រសិនបើមិនទាន់មាន (ថែម column gender)
+        # បង្កើតតារាង users
         conn.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -56,12 +57,15 @@ def welcome():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')
         name = request.form.get('name')
         gender = request.form.get('gender')
         email = request.form.get('email')
         password = request.form.get('password')
+        
+        # បង្កើត ID សម្គាល់ខ្លួនជាលេខ ៦ ខ្ទង់ (ជំនួសឱ្យ Username)
         user_id_number = random.randint(100000, 999999)
+        # កំណត់ username ឱ្យស្មើនឹង ID ដើម្បីរក្សារចនាសម្ព័ន្ធ DB ចាស់
+        username = str(user_id_number) 
         
         try:
             db = get_db()
@@ -70,8 +74,8 @@ def register():
                                 (username, name, gender, email, password, user_id_number))
             db.commit()
             
-            # ចូលប្រព័ន្ធភ្លាមៗក្រោយ Register ជោគជ័យ
-            session.permanent = True
+            # រក្សាទុក Session (Persistent Session ៣០ ថ្ងៃ)
+            session.permanent = True 
             session['user_id'] = cursor.lastrowid
             session['user_name'] = name
             session['username'] = username
@@ -79,19 +83,22 @@ def register():
             
             return redirect(url_for('chat'))
         except Exception as e:
-            return f"កំហុសក្នុងការចុះឈ្មោះ៖ Username ឬ Email នេះមានគេប្រើរួចហើយ! (Error: {str(e)})"
+            return f"កំហុស៖ អ៊ីមែលនេះមានគេប្រើរួចហើយ! (Error: {str(e)})"
     return render_template('register.html')
 
 @app.route('/login', methods=['POST'])
 def login():
     email = request.form.get('email')
     password = request.form.get('password')
-    
+    remember = request.form.get('remember')
+
     db = get_db()
     user = db.execute('SELECT * FROM users WHERE email = ? AND password = ?', (email, password)).fetchone()
     
     if user:
-        session.permanent = True # កំណត់ឱ្យជាប់បានយូរ ៣០ ថ្ងៃ
+        # បើចុច "រក្សាទុកការចូលប្រើ" (Remember Me) ឱ្យ Session នៅជាប់បាន ៣០ ថ្ងៃ
+        session.permanent = True if remember else False
+            
         session['user_id'] = user['id']
         session['user_name'] = user['name']
         session['username'] = user['username']
@@ -136,6 +143,7 @@ def search_friend():
     
     search_query = request.form.get('username', '').strip() 
     db = get_db()
+    # ស្វែងរកតាមរយៈ ID លេខ ៦ ខ្ទង់
     user = db.execute('SELECT id, name, user_id_number FROM users WHERE user_id_number = ? AND id != ?', 
                       (search_query, session['user_id'])).fetchone()
     
@@ -197,6 +205,5 @@ def logout():
     return redirect(url_for('welcome'))
 
 if __name__ == '__main__':
-    # កំណត់ Port ឱ្យត្រូវជាមួយ Render
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
