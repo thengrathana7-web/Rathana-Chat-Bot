@@ -9,9 +9,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "rathana_secret_123")
 app.permanent_session_lifetime = timedelta(days=30)
 
+# កំណត់ Folder សម្រាប់រក្សាទុករូបភាព (ប្រើ uploads តាមកូដចម្បងរបស់អ្នក)
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# បង្កើត Folder បើមិនទាន់មាន
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -33,7 +35,6 @@ def init_db():
             user_id_number INTEGER UNIQUE, 
             profile_pic TEXT DEFAULT 'default.png'
         )''')
-        # បន្ថែម is_read (0=មិនទាន់អាន, 1=អានរួច)
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
@@ -47,33 +48,22 @@ def init_db():
 init_db()
 
 # --- មុខងារ Notifications ---
-
 @app.route('/check_notifications')
 def check_notifications():
     if 'user_id' not in session: return jsonify({"unread_total": 0, "unread_by_user": {}})
-    
     db = get_db()
-    # រាប់សារសរុបដែលមិនទាន់អាន
     total = db.execute('SELECT COUNT(*) as count FROM messages WHERE receiver_id = ? AND is_read = 0', 
                        (session['user_id'],)).fetchone()
-    
-    # រាប់សារបំបែកតាម ID អ្នកផ្ញើនីមួយៗ
     by_user = db.execute('''
         SELECT sender_id, COUNT(*) as count 
         FROM messages 
         WHERE receiver_id = ? AND is_read = 0 
         GROUP BY sender_id
     ''', (session['user_id'],)).fetchall()
-    
     unread_dict = {str(row['sender_id']): row['count'] for row in by_user}
-    
-    return jsonify({
-        "unread_total": total['count'],
-        "unread_by_user": unread_dict
-    })
+    return jsonify({"unread_total": total['count'], "unread_by_user": unread_dict})
 
-# --- Routes ដើម និងការ Update ថ្មី ---
-
+# --- Routes ដើម ---
 @app.route('/')
 def welcome():
     if 'user_id' in session: return redirect(url_for('friend_list'))
@@ -92,16 +82,12 @@ def chat():
     if 'user_id' not in session: return redirect(url_for('welcome'))
     receiver_id = request.args.get('uid')
     if not receiver_id: return redirect(url_for('friend_list'))
-
     db = get_db()
-    # នៅពេលបើក Chat នេះ ត្រូវកំណត់ថាសារដែលគេផ្ញើមកយើងគឺ "អានរួច"
     db.execute('UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ?', 
                (receiver_id, session['user_id']))
     db.commit()
-
     user = db.execute('SELECT name FROM users WHERE id = ?', (receiver_id,)).fetchone()
     chat_with_name = user['name'] if user else "Unknown"
-    
     messages = db.execute('''
         SELECT m.*, u.name as sender_name 
         FROM messages m 
@@ -110,13 +96,10 @@ def chat():
         OR (sender_id = ? AND receiver_id = ?)
         ORDER BY timestamp ASC
     ''', (session['user_id'], receiver_id, receiver_id, session['user_id'])).fetchall()
-    
-    return render_template('chat.html', 
-                           user_name=session['user_name'], 
-                           old_messages=messages,
-                           chat_with_name=chat_with_name,
-                           receiver_id=receiver_id)
+    return render_template('chat.html', user_name=session['user_name'], old_messages=messages,
+                           chat_with_name=chat_with_name, receiver_id=receiver_id)
 
+# --- មុខងារ Settings & Profile Update (Merged) ---
 @app.route('/settings')
 def settings():
     if 'user_id' not in session: return redirect(url_for('welcome'))
@@ -138,14 +121,20 @@ def update_info():
 @app.route('/update_profile_pic', methods=['POST'])
 def update_profile_pic():
     if 'user_id' not in session: return redirect(url_for('welcome'))
-    file = request.files.get('profile_pic')
+    
+    # ពិនិត្យមើលឈ្មោះ field ឱ្យត្រូវជាមួយ HTML (ទាំង 'file' ឬ 'profile_pic')
+    file = request.files.get('file') or request.files.get('profile_pic')
+    
     if file and file.filename != '':
-        ext = file.filename.rsplit('.', 1)[1].lower()
-        filename = secure_filename(f"profile_{session['user_id']}.{ext}")
+        # ប្តូរឈ្មោះឱ្យមានសុវត្ថិភាព និងកំណត់ទម្រង់ឱ្យនៅត្រឹមត្រូវ
+        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+        filename = secure_filename(f"user_{session['user_id']}.{ext}")
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        
         db = get_db()
         db.execute('UPDATE users SET profile_pic = ? WHERE id = ?', (filename, session['user_id']))
         db.commit()
+        
     return redirect(url_for('settings'))
 
 @app.route('/send_message', methods=['POST'])
@@ -158,8 +147,13 @@ def send_message():
     db.commit()
     return jsonify({"status": "sent"})
 
-# --- Route ផ្សេងៗដូចដើម (Login, Register, Logout, etc.) ---
-# ... (រក្សាកូដ Login/Register របស់អ្នកឱ្យនៅដដែល)
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('welcome'))
+
+# បន្ថែម Route សម្រាប់ Register/Login តាមកូដដើមរបស់អ្នក...
+# (សូមប្រាកដថាអ្នកនៅរក្សាទុក routes ទាំងនោះ)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
