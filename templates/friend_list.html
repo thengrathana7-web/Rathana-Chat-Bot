@@ -5,30 +5,45 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #0e1621; color: white; font-family: sans-serif; margin: 0; }
-        .header { background: #17212b; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; }
+        
+        /* Header ថ្មីដែលអ្នកចង់បាន */
+        .header { 
+            background: #17212b; 
+            padding: 15px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000;
+        }
+
         .friend-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #0e1621; background: #17212b; cursor: pointer; text-decoration: none; color: white; }
         .friend-item:active { background: #242f3d; }
-        .avatar { width: 50px; height: 50px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; margin-right: 15px; }
+        
+        .avatar { width: 50px; height: 50px; background: #2481cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; margin-right: 15px; text-transform: uppercase; }
+        
         .friend-info h4 { margin: 0; font-size: 16px; }
         .friend-info p { margin: 3px 0 0; font-size: 12px; color: #808b99; }
+        
         .search-box { padding: 10px; background: #0e1621; }
-        .search-box input { width: 100%; padding: 10px; border-radius: 8px; border: none; background: #242f3d; color: white; box-sizing: border-box; }
+        .search-box input { width: 100%; padding: 12px; border-radius: 10px; border: none; background: #242f3d; color: white; box-sizing: border-box; outline: none; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h3 style="margin:0;">Rathana Chat</h3>
-        <a href="/settings" style="color:#2481cc;"><i class="fas fa-cog fa-lg"></i></a>
+        <h2 style="color: white; margin: 0;">Rathana Chat <span style="color: #2481cc;">Bot</span></h2>
+        <a href="/settings" style="color: white; font-size: 24px; text-decoration: none;">⚙️</a>
     </div>
 
     <div class="search-box">
-        <input type="text" placeholder="ស្វែងរកតាម ID (ឧទាហរណ៍: 123456)...">
+        <input type="text" id="searchInput" placeholder="ស្វែងរកតាម ID (ឧទាហរណ៍: 123456)...">
     </div>
 
-    <div class="friend-list">
+    <div class="friend-list" id="friendListContainer">
         {% for friend in friends %}
         <a href="/chat?uid={{ friend.id }}" class="friend-item">
-            <div class="avatar">{{ friend.name[0] | upper }}</div>
+            <div class="avatar">{{ friend.name[0] }}</div>
             <div class="friend-info">
                 <h4>{{ friend.name }}</h4>
                 <p>ID: {{ friend.user_id_number }}</p>
@@ -43,5 +58,22 @@
         <p>មិនទាន់មានមិត្តភក្តិនៅឡើយទេ</p>
     </div>
     {% endif %}
+
+    <script>
+        // បន្ថែមមុខងារស្វែងរកមិត្តភក្តិក្នុងបញ្ជី (Client-side Search)
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            let filter = e.target.value.toLowerCase();
+            let items = document.querySelectorAll('.friend-item');
+            
+            items.forEach(item => {
+                let text = item.textContent.toLowerCase();
+                if(text.includes(filter)) {
+                    item.style.display = "";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        });
+    </script>
 </body>
 </html>
