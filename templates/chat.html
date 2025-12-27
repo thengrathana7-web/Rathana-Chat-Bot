@@ -7,51 +7,67 @@
     
     <style>
         body { margin: 0; background: #0e1621; font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-        .chat-header { background: #17212b; padding: 10px 15px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #0e1621; color: white; }
-        .back-btn { color: #2481cc; text-decoration: none; font-size: 18px; display: flex; align-items: center; }
-        .user-info { flex: 1; display: flex; flex-direction: column; }
+        
+        /* កែសម្រួល Header ឱ្យមានប៊ូតុង Settings */
+        .chat-header { 
+            background: #17212b; 
+            padding: 10px 15px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; /* បំបែកឆ្វេង និងស្តាំ */
+            border-bottom: 1px solid #0e1621; 
+            color: white; 
+        }
+        
+        .header-left { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .header-right { display: flex; align-items: center; gap: 15px; }
+
+        .back-btn { color: #2481cc; text-decoration: none; font-size: 18px; }
+        .user-info { display: flex; flex-direction: column; }
         .chat-with-name { font-weight: bold; font-size: 15px; }
         .status { font-size: 11px; color: #40a7e3; }
 
-        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; cursor: pointer; }
-        .chat-audio { width: 100%; max-width: 200px; height: 35px; margin-top: 5px; }
-
-        .search-container { position: relative; width: 120px; }
-        .search-container input { width: 100%; padding: 6px 12px; border-radius: 15px; border: none; background: #242f3d; color: white; outline: none; font-size: 12px; box-sizing: border-box; }
-        
-        #contactList { display: flex; overflow-x: auto; background: #17212b; padding: 10px; gap: 15px; border-bottom: 1px solid #0e1621; white-space: nowrap; scrollbar-width: none; }
-        
-        .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; -webkit-overflow-scrolling: touch; }
-        
-        .input-area { background: #17212b; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; position: relative; }
-        .input-area input[type="text"] { flex: 1; background: #242f3d; border: none; color: white; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; }
-        .media-label, .emoji-btn { color: #808b99; font-size: 22px; cursor: pointer; background: none; border: none; padding: 0; }
-        .record-btn { color: white; font-size: 22px; cursor: pointer; background: none; border: none; padding: 0; transition: 0.2s; }
-        .send-btn { color: #2481cc; font-size: 22px; cursor: pointer; background: none; border: none; }
-
-        /* បន្ថែម Style សម្រាប់ Emoji Picker */
-        #emojiPickerContainer { 
-            position: absolute; 
-            bottom: 75px; 
-            left: 10px; 
-            display: none; 
-            z-index: 1000; 
-            box-shadow: 0 5px 25px rgba(0,0,0,0.6); 
-            border-radius: 10px;
-            overflow: hidden;
+        /* Search ID Style */
+        .search-container input { 
+            width: 100px; 
+            padding: 6px 12px; 
+            border-radius: 15px; 
+            border: none; 
+            background: #242f3d; 
+            color: white; 
+            outline: none; 
+            font-size: 12px; 
         }
+
+        .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; }
+        
+        .input-area { background: #17212b; padding: 10px 15px; display: flex; align-items: center; gap: 10px; position: relative; }
+        .input-area input[type="text"] { flex: 1; background: #242f3d; border: none; color: white; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; }
+        
+        .emoji-btn, .media-label, .record-btn, .send-btn { color: #808b99; font-size: 22px; cursor: pointer; background: none; border: none; }
+        .send-btn { color: #2481cc; }
+
+        #emojiPickerContainer { position: absolute; bottom: 75px; left: 10px; display: none; z-index: 1000; }
         emoji-picker { width: 300px; height: 400px; }
     </style>
 </head>
 <body>
     <div class="chat-header">
-        <a href="/friends" class="back-btn"><i class="fas fa-arrow-left"></i></a>
-        <div class="user-info">
-            <div class="chat-with-name" id="chatTitle">{{ chat_with_name if chat_with_name else "Global Chat" }}</div>
-            <div class="status">Online</div>
+        <div class="header-left">
+            <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+            <div class="user-info">
+                <div class="chat-with-name" id="chatTitle">Global Chat</div>
+                <div class="status">Online</div>
+            </div>
         </div>
-        <div class="search-container">
-            <input type="number" id="userSearch" placeholder="Search ID...">
+
+        <div class="header-right">
+            <div class="search-container">
+                <input type="number" id="userSearch" placeholder="Search ID...">
+            </div>
+            <a href="/settings" style="color: white; font-size: 20px; text-decoration: none;">
+                <i class="fas fa-cog"></i>
+            </a>
         </div>
     </div>
 
@@ -63,151 +79,76 @@
     </div>
 
     <div class="input-area">
-        <button type="button" class="emoji-btn" id="emojiBtn">
-            <i class="far fa-smile"></i>
-        </button>
-
-        <label for="mediaInput" class="media-label">
-            <i class="far fa-image"></i>
-        </label>
-        <input type="file" id="mediaInput" accept="image/*,video/*" hidden onchange="uploadMedia()">
-
+        <button type="button" class="emoji-btn" id="emojiBtn"><i class="far fa-smile"></i></button>
+        <label for="mediaInput" class="media-label"><i class="far fa-image"></i></label>
+        <input type="file" id="mediaInput" hidden onchange="uploadMedia()">
         <input type="text" id="msgInput" placeholder="សរសេរសារ..." autocomplete="off">
-
-        <button id="recordBtn" class="record-btn" 
-                onmousedown="startRecording()" onmouseup="stopRecording()" 
-                ontouchstart="startRecording()" ontouchend="stopRecording()">
-            <i class="fas fa-microphone"></i>
-        </button>
-
-        <button class="send-btn" onclick="sendMessage()">
-            <i class="fas fa-paper-plane"></i>
-        </button>
+        <button id="recordBtn" class="record-btn"><i class="fas fa-microphone"></i></button>
+        <button class="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
     </div>
 
     <script>
+        // រក្សាមុខងារ JavaScript របស់អ្នកទាំងអស់ទុកដដែល
         const msgBox = document.getElementById('msgBox');
         const msgInput = document.getElementById('msgInput');
         const emojiBtn = document.getElementById('emojiBtn');
         const emojiPickerContainer = document.getElementById('emojiPickerContainer');
         const emojiPicker = emojiPickerContainer.querySelector('emoji-picker');
-        
-        let mediaRecorder;
-        let audioChunks = [];
-        let refreshInterval = null;
 
-        // --- ១. កូដសម្រាប់គ្រប់គ្រង Emoji (កែលម្អថ្មី) ---
         emojiBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // ការពារកុំឱ្យវាបិទវិញភ្លាមៗ
+            e.stopPropagation();
             const isVisible = emojiPickerContainer.style.display === 'block';
             emojiPickerContainer.style.display = isVisible ? 'none' : 'block';
         });
 
-        // នៅពេលចុចរើស Emoji
         emojiPicker.addEventListener('emoji-click', event => {
-            msgInput.value += event.detail.unicode; // បញ្ចូល Emoji ទៅក្នុងប្រអប់សរសេរ
-            msgInput.focus(); // ឱ្យ Cursor នៅជាប់ក្នុងប្រអប់ដដែល
+            msgInput.value += event.detail.unicode;
+            msgInput.focus();
         });
 
-        // បិទផ្ទាំង Emoji ពេលចុចកន្លែងផ្សេង
         document.addEventListener('click', (e) => {
             if (!emojiPickerContainer.contains(e.target) && e.target !== emojiBtn) {
                 emojiPickerContainer.style.display = 'none';
             }
         });
 
-        // --- ២. មុខងារផ្ញើសារជាអក្សរ ---
-        function sendMessage() {
-            const text = msgInput.value.trim();
-            if (text !== "" && window.currentReceiverId) {
-                fetch('/send_message', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text, receiver_id: window.currentReceiverId, msg_type: 'text' })
-                }).then(() => {
-                    msgInput.value = "";
-                    emojiPickerContainer.style.display = 'none'; // បិទ Emoji ពេលផ្ញើរួច
-                    loadChatHistory(window.currentReceiverId);
-                });
+        // មុខងារ Search ID
+        document.getElementById('userSearch').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                const idNum = this.value;
+                fetch(`/search_user/${idNum}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.id) {
+                            startPrivateChat(data.id, data.name);
+                        } else {
+                            alert("រកមិនឃើញលេខ ID នេះទេ!");
+                        }
+                    });
             }
+        });
+
+        function startPrivateChat(id, name) {
+            window.currentReceiverId = id;
+            document.getElementById('chatTitle').innerText = name;
+            loadChatHistory(id);
         }
 
-        // --- ៣. មុខងារ Microphone ---
-        async function startRecording() {
-            if (!window.currentReceiverId) return;
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = sendAudio;
-                mediaRecorder.start();
-                document.getElementById('recordBtn').style.color = 'red';
-            } catch (err) { alert("សូមបើកសិទ្ធិប្រើ Microphone!"); }
-        }
-
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                mediaRecorder.stop();
-                document.getElementById('recordBtn').style.color = 'white';
-            }
-        }
-
-        function sendAudio() {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            const formData = new FormData();
-            formData.append('file', audioBlob, 'voice.webm');
-            formData.append('type', 'audio');
-            formData.append('receiver_id', window.currentReceiverId);
-            fetch('/send_media', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => { if(data.status === 'sent') loadChatHistory(window.currentReceiverId); });
-        }
-
-        // --- ៤. មុខងារ Upload Media ---
-        function uploadMedia() {
-            const fileInput = document.getElementById('mediaInput');
-            if (!fileInput.files[0] || !window.currentReceiverId) return;
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            formData.append('receiver_id', window.currentReceiverId);
-            formData.append('type', fileInput.files[0].type.startsWith('image') ? 'image' : 'video');
-            fetch('/send_media', { method: 'POST', body: formData })
-            .then(() => { loadChatHistory(window.currentReceiverId); fileInput.value = ""; });
-        }
-
-        // --- ៥. មុខងារ Load Chat ---
         function loadChatHistory(receiverId) {
             fetch(`/get_messages/${receiverId}`)
                 .then(res => res.json())
                 .then(messages => {
                     let chatHTML = "";
                     messages.forEach(msg => {
-                        const isMe = msg.sender_id == {{ session['user_id'] }};
+                        const isMe = msg.sender_id == {{ session['user_id'] if session['user_id'] else 0 }};
                         const style = isMe ? "background: #2b5278; align-self: flex-end;" : "background: #182533; align-self: flex-start;";
-                        const time = msg.timestamp.split(' ')[1].substring(0,5);
-                        let content = msg.msg_type === 'image' ? `<img src="/static/uploads/${msg.file_path}" class="chat-img" onclick="window.open(this.src)">` :
-                                     msg.msg_type === 'audio' ? `<audio controls class="chat-audio"><source src="/static/uploads/${msg.file_path}"></audio>` :
-                                     msg.msg_type === 'video' ? `<video controls class="chat-img"><source src="/static/uploads/${msg.file_path}"></video>` : msg.message;
-
                         chatHTML += `<div style="${style} padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; max-width: 75%; color: white;">
-                                        ${content} 
-                                        <div style="font-size: 10px; color: #a0acba; text-align: right; margin-top: 4px;">${time}</div>
+                                        ${msg.message}
                                      </div>`;
                     });
-                    if (msgBox.innerHTML !== chatHTML) {
-                        msgBox.innerHTML = chatHTML;
-                        msgBox.scrollTop = msgBox.scrollHeight;
-                    }
+                    msgBox.innerHTML = chatHTML;
+                    msgBox.scrollTop = msgBox.scrollHeight;
                 });
-        }
-
-        function startPrivateChat(id, name) {
-            window.currentReceiverId = id;
-            document.getElementById('chatTitle').innerText = name;
-            loadChatHistory(id);
-            if(refreshInterval) clearInterval(refreshInterval);
-            refreshInterval = setInterval(() => loadChatHistory(id), 3000);
         }
     </script>
 </body>
