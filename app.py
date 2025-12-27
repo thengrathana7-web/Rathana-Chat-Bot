@@ -35,7 +35,6 @@ def init_db():
             profile_pic TEXT DEFAULT 'default.png'
         )''')
         
-        # កែសម្រួល Table messages បន្ថែម msg_type និង file_path
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER,
@@ -55,13 +54,12 @@ init_db()
 def upgrade_database():
     db = get_db()
     try:
-        # បន្ថែម Column ថ្មីទៅក្នុង Table messages ដែលមានស្រាប់
         db.execute("ALTER TABLE messages ADD COLUMN msg_type TEXT DEFAULT 'text'")
         db.execute("ALTER TABLE messages ADD COLUMN file_path TEXT")
         db.commit()
         return "Database បាន Upgrade ជោគជ័យ!"
     except Exception as e:
-        return f"Database ប្រហែលជាមាន Column ទាំងនេះរួចហើយ៖ {e}"
+        return f"Database ប្រហែលជាមាន Column ទាំងនេះរួចហើយ ឬមានកំហុស៖ {e}"
 
 # --- មុខងារ Notifications ---
 @app.route('/check_notifications')
@@ -105,7 +103,6 @@ def chat():
     user = db.execute('SELECT name FROM users WHERE id = ?', (receiver_id,)).fetchone()
     chat_with_name = user['name'] if user else "Unknown"
     
-    # ទាញយកសារទាំងអស់ (រួមទាំង msg_type និង file_path)
     messages = db.execute('''
         SELECT m.*, u.name as sender_name 
         FROM messages m 
@@ -118,12 +115,13 @@ def chat():
     return render_template('chat.html', user_name=session['user_name'], old_messages=messages,
                            chat_with_name=chat_with_name, receiver_id=receiver_id)
 
+# --- មុខងារផ្ញើសារ (Text & Media) ---
+
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if 'user_id' not in session: return jsonify({"status": "error"}), 403
     data = request.get_json()
-    
-    msg_type = data.get('msg_type', 'text') # default ជា text
+    msg_type = data.get('msg_type', 'text')
     file_path = data.get('file_path', None)
     
     db = get_db()
@@ -133,6 +131,30 @@ def send_message():
     ''', (session['user_id'], data.get('receiver_id'), data.get('message'), msg_type, file_path))
     db.commit()
     return jsonify({"status": "sent"})
+
+@app.route('/send_media', methods=['POST'])
+def send_media():
+    if 'user_id' not in session: return jsonify({"status": "error"}), 403
+    
+    receiver_id = request.form.get('receiver_id')
+    msg_type = request.form.get('type') # 'image', 'video', ឬ 'audio'
+    file = request.files.get('file')
+    
+    if file:
+        # បង្កើតឈ្មោះ file សុវត្ថិភាព
+        filename = secure_filename(f"{msg_type}_{random.randint(1000,9999)}_{file.filename}")
+        path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(path)
+        
+        db = get_db()
+        # រក្សាទុកក្នុង DB (បន្ថែម is_read = 0 ដើម្បីឱ្យត្រូវជាមួយមុខងារ Notification)
+        db.execute('''
+            INSERT INTO messages (sender_id, receiver_id, msg_type, file_path, is_read) 
+            VALUES (?, ?, ?, ?, 0)
+        ''', (session['user_id'], receiver_id, msg_type, filename))
+        db.commit()
+        return jsonify({"status": "sent", "file": filename})
+    return jsonify({"status": "error"}), 400
 
 # --- Settings & Profile Update ---
 @app.route('/settings')
