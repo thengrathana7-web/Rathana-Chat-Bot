@@ -1,26 +1,123 @@
 <!DOCTYPE html>
-<html>
+<html lang="km">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ចុះឈ្មោះ - Rathana Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #0e1621; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { background: #17212b; padding: 30px; border-radius: 15px; width: 90%; max-width: 350px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #242f3d; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #2481cc; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        a { color: #2481cc; text-decoration: none; font-size: 14px; display: block; margin-top: 15px; }
+        body { 
+            background-color: #0e1621; 
+            color: white; 
+            font-family: 'Kantumruy Pro', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        .container { 
+            background: #17212b; 
+            padding: 30px; 
+            border-radius: 15px; 
+            width: 90%; 
+            max-width: 380px; 
+            text-align: center; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        h2 { margin-bottom: 25px; color: #fff; font-size: 24px; }
+        
+        /* រចនាប្រអប់បញ្ចូលទិន្នន័យ */
+        .input-box {
+            text-align: left;
+            margin-bottom: 15px;
+        }
+        label { display: block; margin-bottom: 5px; font-size: 14px; color: #8ab4f8; }
+        
+        input, select { 
+            width: 100%; 
+            padding: 12px; 
+            border-radius: 8px; 
+            border: 1px solid #242f3d; 
+            background: #242f3d; 
+            color: white; 
+            box-sizing: border-box; 
+            font-size: 15px;
+            outline: none;
+            transition: 0.3s;
+        }
+        input:focus, select:focus { border-color: #2481cc; }
+
+        /* ប៊ូតុង Register */
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            border-radius: 8px; 
+            border: none; 
+            background: #2481cc; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 16px;
+            cursor: pointer; 
+            margin-top: 15px; 
+            transition: 0.3s;
+        }
+        button:hover { background: #3294e6; }
+
+        /* មុខងារ "ចងចាំខ្ញុំ" */
+        .remember-me {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            font-size: 13px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .remember-me input { width: auto; margin-right: 8px; }
+
+        a { color: #8ab4f8; text-decoration: none; font-size: 14px; display: block; margin-top: 20px; }
+        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h2>បង្កើតគណនី</h2>
+        <h2>បង្កើតគណនីថ្មី</h2>
         <form action="/register" method="POST">
-            <input type="text" name="name" placeholder="ឈ្មោះពេញ (Name)" required>
-            <input type="text" name="username" placeholder="ឈ្មោះប្រើប្រាស់ (Username)" required>
-            <input type="email" name="email" placeholder="អ៊ីមែល (Email)" required>
-            <input type="password" name="password" placeholder="លេខសម្ងាត់" required>
-            <button type="submit">ចុះឈ្មោះឥឡូវនេះ</button>
+            <div class="input-box">
+                <label>ឈ្មោះពេញ</label>
+                <input type="text" name="name" placeholder="បញ្ជូលឈ្មោះរបស់អ្នក" required>
+            </div>
+
+            <div class="input-box">
+                <label>ភេទ</label>
+                <select name="gender" required>
+                    <option value="" disabled selected>ជ្រើសរើសភេទ</option>
+                    <option value="male">ប្រុស (Male)</option>
+                    <option value="female">ស្រី (Female)</option>
+                    <option value="other">ផ្សេងៗ</option>
+                </select>
+            </div>
+
+            <div class="input-box">
+                <label>អ៊ីមែល</label>
+                <input type="email" name="email" placeholder="example@mail.com" required>
+            </div>
+
+            <div class="input-box">
+                <label>លេខសម្ងាត់</label>
+                <input type="password" name="password" placeholder="បញ្ចូលលេខសម្ងាត់" required>
+            </div>
+
+            <label class="remember-me">
+                <input type="checkbox" name="remember" checked> រក្សាទុកការចូលប្រើ (កុំឱ្យ Login ម្ដងទៀត)
+            </label>
+
+            <button type="submit">Register</button>
         </form>
-        <a href="/">ត្រឡប់ទៅការ Login</a>
+
+        <a href="/">មានគណនីរួចហើយ? ត្រឡប់ទៅការ Login</a>
     </div>
+
 </body>
 </html>
