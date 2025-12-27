@@ -1,6 +1,6 @@
 import os
 import sqlite3
-import random  # បន្ថែមសម្រាប់ generate user_id_number
+import random  # សម្រាប់ generate user_id_number
 from datetime import timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "rathana_secret_123")
 app.permanent_session_lifetime = timedelta(days=30)
 
-# កំណត់ Folder សម្រាប់រក្សារូបភាព
+# កំណត់ Folder សម្រាប់រក្សារូបភាព និងឯកសារ media
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -40,7 +40,7 @@ def init_db():
             sender_id INTEGER,
             receiver_id INTEGER,
             message TEXT,
-            msg_type TEXT DEFAULT 'text', -- 'text', 'image', 'video', 'audio'
+            msg_type TEXT DEFAULT 'text',
             file_path TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             is_read INTEGER DEFAULT 0
@@ -49,20 +49,21 @@ def init_db():
 
 init_db()
 
-# --- មុខងារចុះឈ្មោះ (Register) - ថ្មី ---
+# --- មុខងារចុះឈ្មោះ (Register) - បច្ចុប្បន្នភាពថ្មី ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if 'user_id' in session:
         return redirect(url_for('friend_list'))
         
     if request.method == 'POST':
+        # ទទួលទិន្នន័យពី Form ក្នុង register.html
         name = request.form.get('name')
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
         gender = request.form.get('gender')
         
-        # បង្កើតលេខ ID 6 ខ្ទង់ដោយចៃដន្យ (ឧទាហរណ៍៖ 542312)
+        # បង្កើត ID 6 ខ្ទង់ដោយចៃដន្យ
         user_id_number = random.randint(100000, 999999)
         
         db = get_db()
@@ -73,7 +74,7 @@ def register():
             ''', (username, name, gender, email, password, user_id_number))
             db.commit()
             
-            # បន្ទាប់ពីចុះឈ្មោះរួច ឱ្យវា Login ចូលតែម្តង
+            # ចុះឈ្មោះរួច ឱ្យ Login ចូលតែម្តង
             user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
             session.permanent = True
             session['user_id'] = user['id']
@@ -82,10 +83,12 @@ def register():
             return redirect(url_for('friend_list'))
         except sqlite3.IntegrityError:
             return "ឈ្មោះអ្នកប្រើ (Username) ឬ អ៊ីមែល នេះមានគេប្រើរួចហើយ!"
+        except Exception as e:
+            return f"មានបញ្ហាក្នុងការចុះឈ្មោះ៖ {str(e)}"
             
     return render_template('register.html')
 
-# --- មុខងារ Login (បន្ថែមដើម្បីឱ្យគ្រប់គ្រាន់) ---
+# --- មុខងារ Login ---
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username')
@@ -103,35 +106,7 @@ def login():
     else:
         return "ឈ្មោះអ្នកប្រើ ឬ លេខសម្ងាត់មិនត្រឹមត្រូវ!"
 
-# --- Route ពិសេសសម្រាប់ Update Database ចាស់ ---
-@app.route('/upgrade_database')
-def upgrade_database():
-    db = get_db()
-    try:
-        db.execute("ALTER TABLE messages ADD COLUMN msg_type TEXT DEFAULT 'text'")
-        db.execute("ALTER TABLE messages ADD COLUMN file_path TEXT")
-        db.commit()
-        return "Database បាន Upgrade ជោគជ័យ!"
-    except Exception as e:
-        return f"Database ប្រហែលជាមាន Column ទាំងនេះរួចហើយ ឬមានកំហុស៖ {e}"
-
-# --- មុខងារ Notifications ---
-@app.route('/check_notifications')
-def check_notifications():
-    if 'user_id' not in session: return jsonify({"unread_total": 0, "unread_by_user": {}})
-    db = get_db()
-    total = db.execute('SELECT COUNT(*) as count FROM messages WHERE receiver_id = ? AND is_read = 0', 
-                       (session['user_id'],)).fetchone()
-    by_user = db.execute('''
-        SELECT sender_id, COUNT(*) as count 
-        FROM messages 
-        WHERE receiver_id = ? AND is_read = 0 
-        GROUP BY sender_id
-    ''', (session['user_id'],)).fetchall()
-    unread_dict = {str(row['sender_id']): row['count'] for row in by_user}
-    return jsonify({"unread_total": total['count'], "unread_by_user": unread_dict})
-
-# --- Routes ដើម ---
+# --- Routes សម្រាប់ Chat និង Friends ---
 @app.route('/')
 def welcome():
     if 'user_id' in session: return redirect(url_for('friend_list'))
@@ -150,38 +125,41 @@ def chat():
     if 'user_id' not in session: return redirect(url_for('welcome'))
     receiver_id = request.args.get('uid')
     if not receiver_id: return redirect(url_for('friend_list'))
+    
     db = get_db()
+    # កំណត់ថាបានអានសាររួច
     db.execute('UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ?', 
                (receiver_id, session['user_id']))
     db.commit()
+    
     user = db.execute('SELECT name FROM users WHERE id = ?', (receiver_id,)).fetchone()
     chat_with_name = user['name'] if user else "Unknown"
     
+    return render_template('chat.html', user_name=session['user_name'], 
+                           chat_with_name=chat_with_name, receiver_id=receiver_id)
+
+@app.route('/get_messages/<int:receiver_id>')
+def get_messages(receiver_id):
+    if 'user_id' not in session: return jsonify([])
+    db = get_db()
     messages = db.execute('''
-        SELECT m.*, u.name as sender_name 
-        FROM messages m 
-        JOIN users u ON m.sender_id = u.id 
+        SELECT * FROM messages 
         WHERE (sender_id = ? AND receiver_id = ?) 
         OR (sender_id = ? AND receiver_id = ?)
         ORDER BY timestamp ASC
     ''', (session['user_id'], receiver_id, receiver_id, session['user_id'])).fetchall()
-    
-    return render_template('chat.html', user_name=session['user_name'], old_messages=messages,
-                           chat_with_name=chat_with_name, receiver_id=receiver_id)
+    return jsonify([dict(msg) for msg in messages])
 
-# --- មុខងារផ្ញើសារ ---
+# --- មុខងារផ្ញើសារ (Text, Image, Audio, Video) ---
 @app.route('/send_message', methods=['POST'])
 def send_message():
     if 'user_id' not in session: return jsonify({"status": "error"}), 403
     data = request.get_json()
-    msg_type = data.get('msg_type', 'text')
-    file_path = data.get('file_path', None)
-    
     db = get_db()
     db.execute('''
-        INSERT INTO messages (sender_id, receiver_id, message, msg_type, file_path, is_read) 
-        VALUES (?, ?, ?, ?, ?, 0)
-    ''', (session['user_id'], data.get('receiver_id'), data.get('message'), msg_type, file_path))
+        INSERT INTO messages (sender_id, receiver_id, message, msg_type, is_read) 
+        VALUES (?, ?, ?, ?, 0)
+    ''', (session['user_id'], data.get('receiver_id'), data.get('message'), data.get('msg_type', 'text')))
     db.commit()
     return jsonify({"status": "sent"})
 
@@ -193,8 +171,7 @@ def send_media():
     file = request.files.get('file')
     if file:
         filename = secure_filename(f"{msg_type}_{random.randint(1000,9999)}_{file.filename}")
-        path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(path)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         db = get_db()
         db.execute('''
             INSERT INTO messages (sender_id, receiver_id, msg_type, file_path, is_read) 
@@ -204,36 +181,13 @@ def send_media():
         return jsonify({"status": "sent", "file": filename})
     return jsonify({"status": "error"}), 400
 
+# --- មុខងារ Settings និង Profile ---
 @app.route('/settings')
 def settings():
     if 'user_id' not in session: return redirect(url_for('welcome'))
     db = get_db()
     user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
     return render_template('settings.html', user=user)
-
-@app.route('/update_info', methods=['POST'])
-def update_info():
-    if 'user_id' not in session: return redirect(url_for('welcome'))
-    name = request.form.get('name')
-    gender = request.form.get('gender')
-    db = get_db()
-    db.execute('UPDATE users SET name = ?, gender = ? WHERE id = ?', (name, gender, session['user_id']))
-    db.commit()
-    session['user_name'] = name
-    return redirect(url_for('settings'))
-
-@app.route('/update_profile_pic', methods=['POST'])
-def update_profile_pic():
-    if 'user_id' not in session: return redirect(url_for('welcome'))
-    file = request.files.get('file') or request.files.get('profile_pic')
-    if file and file.filename != '':
-        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
-        filename = secure_filename(f"user_{session['user_id']}.{ext}")
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        db = get_db()
-        db.execute('UPDATE users SET profile_pic = ? WHERE id = ?', (filename, session['user_id']))
-        db.commit()
-    return redirect(url_for('settings'))
 
 @app.route('/logout')
 def logout():
