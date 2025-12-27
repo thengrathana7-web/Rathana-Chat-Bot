@@ -3,6 +3,8 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js" type="module"></script>
+    
     <style>
         body { margin: 0; background: #0e1621; font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { background: #17212b; padding: 10px 15px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #0e1621; color: white; }
@@ -11,6 +13,7 @@
         .chat-with-name { font-weight: bold; font-size: 15px; }
         .status { font-size: 11px; color: #40a7e3; }
 
+        /* Media styles in chat */
         .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; cursor: pointer; }
         .chat-audio { width: 100%; max-width: 200px; height: 35px; margin-top: 5px; }
 
@@ -19,15 +22,18 @@
         #searchResult { position: absolute; top: 40px; right: 0; width: 200px; background: #17212b; border-radius: 10px; padding: 10px; display: none; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         
         #contactList { display: flex; overflow-x: auto; background: #17212b; padding: 10px; gap: 15px; border-bottom: 1px solid #0e1621; white-space: nowrap; scrollbar-width: none; }
-        .contact-item { text-align: center; cursor: pointer; min-width: 50px; }
         
         .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover; -webkit-overflow-scrolling: touch; }
         
-        .input-area { background: #17212b; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; }
+        .input-area { background: #17212b; padding: 10px 15px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; position: relative; }
         .input-area input[type="text"] { flex: 1; background: #242f3d; border: none; color: white; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 16px; }
-        .media-label { color: #808b99; font-size: 22px; cursor: pointer; }
+        .media-label, .emoji-btn { color: #808b99; font-size: 22px; cursor: pointer; background: none; border: none; padding: 0; }
         .record-btn { color: white; font-size: 22px; cursor: pointer; background: none; border: none; padding: 0; transition: 0.2s; }
         .send-btn { color: #2481cc; font-size: 22px; cursor: pointer; background: none; border: none; }
+
+        /* Emoji Picker Container */
+        #emojiPickerContainer { position: absolute; bottom: 70px; left: 10px; display: none; z-index: 1000; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        emoji-picker { --num-columns: 8; --category-emoji-size: 1.2rem; width: 300px; height: 400px; }
     </style>
 </head>
 <body>
@@ -51,7 +57,15 @@
     <div id="contactList"></div>
     <div class="messages" id="msgBox"></div>
 
+    <div id="emojiPickerContainer">
+        <emoji-picker></emoji-picker>
+    </div>
+
     <div class="input-area">
+        <button type="button" class="emoji-btn" id="emojiBtn">
+            <i class="far fa-smile"></i>
+        </button>
+
         <label for="mediaInput" class="media-label">
             <i class="far fa-image"></i>
         </label>
@@ -75,63 +89,30 @@
     <script>
         const msgBox = document.getElementById('msgBox');
         const msgInput = document.getElementById('msgInput');
-        let refreshInterval = null;
-
-        // --- ផ្នែកគ្រប់គ្រងសំឡេង (Microphone) - ថ្មី ---
+        const emojiBtn = document.getElementById('emojiBtn');
+        const emojiPickerContainer = document.getElementById('emojiPickerContainer');
+        const emojiPicker = emojiPickerContainer.querySelector('emoji-picker');
+        
         let mediaRecorder;
         let audioChunks = [];
+        let refreshInterval = null;
 
-        async function startRecording() {
-            if (!window.currentReceiverId) {
-                alert("សូមជ្រើសរើសមិត្តភក្តិមុននឹងផ្ញើសំឡេង!");
-                return;
+        // --- មុខងារ Emoji ---
+        emojiBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = emojiPickerContainer.style.display === 'block';
+            emojiPickerContainer.style.display = isVisible ? 'none' : 'block';
+        });
+
+        emojiPicker.addEventListener('emoji-click', event => {
+            msgInput.value += event.detail.unicode;
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!emojiPickerContainer.contains(e.target) && e.target !== emojiBtn) {
+                emojiPickerContainer.style.display = 'none';
             }
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                
-                mediaRecorder.ondataavailable = e => {
-                    audioChunks.push(e.data);
-                };
-
-                mediaRecorder.onstop = sendAudio;
-                
-                audioChunks = []; // សម្អាតទិន្នន័យចាស់
-                mediaRecorder.start();
-                
-                document.getElementById('recordBtn').style.color = 'red';
-            } catch (err) {
-                console.error("មិនអាចប្រើ Microphone បានទេ:", err);
-                alert("សូមអនុញ្ញាតឱ្យប្រើ Microphone ក្នុង Browser របស់អ្នក!");
-            }
-        }
-
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                mediaRecorder.stop();
-                document.getElementById('recordBtn').style.color = 'white';
-            }
-        }
-
-        function sendAudio() {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            const formData = new FormData();
-            
-            formData.append('file', audioBlob, 'voice.webm');
-            formData.append('type', 'audio');
-            formData.append('receiver_id', window.currentReceiverId); 
-
-            fetch('/send_media', { 
-                method: 'POST', 
-                body: formData 
-            })
-            .then(res => res.json())
-            .then(data => { 
-                if(data.status === 'sent') {
-                    loadChatHistory(window.currentReceiverId);
-                } 
-            });
-        }
+        });
 
         // --- មុខងារផ្ញើសារជាអក្សរ ---
         function sendMessage() {
@@ -143,6 +124,7 @@
                     body: JSON.stringify({ message: text, receiver_id: window.currentReceiverId, msg_type: 'text' })
                 }).then(() => {
                     msgInput.value = "";
+                    emojiPickerContainer.style.display = 'none';
                     loadChatHistory(window.currentReceiverId);
                 });
             }
@@ -162,8 +144,45 @@
             .then(res => res.json())
             .then(data => {
                 if(data.status === "sent") loadChatHistory(window.currentReceiverId);
-                fileInput.value = "";
+                fileInput.value = ""; 
             });
+        }
+
+        // --- មុខងារ Microphone (Voice Recording) ---
+        async function startRecording() {
+            if (!window.currentReceiverId) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = sendAudio;
+                
+                mediaRecorder.start();
+                document.getElementById('recordBtn').style.color = 'red';
+            } catch (err) {
+                alert("សូមបើកសិទ្ធិប្រើ Microphone!");
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+                document.getElementById('recordBtn').style.color = 'white';
+            }
+        }
+
+        function sendAudio() {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'voice.webm');
+            formData.append('type', 'audio');
+            formData.append('receiver_id', window.currentReceiverId);
+
+            fetch('/send_media', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => { if(data.status === 'sent') loadChatHistory(window.currentReceiverId); });
         }
 
         // --- មុខងារបង្ហាញសារ (Display Messages) ---
@@ -181,7 +200,7 @@
                         if (msg.msg_type === 'image') {
                             content = `<img src="/static/uploads/${msg.file_path}" class="chat-img" onclick="window.open(this.src)">`;
                         } else if (msg.msg_type === 'audio') {
-                            content = `<audio controls class="chat-audio"><source src="/static/uploads/${msg.file_path}"></audio>`;
+                            content = `<audio controls class="chat-audio"><source src="/static/uploads/${msg.file_path}" type="audio/mpeg"></audio>`;
                         } else if (msg.msg_type === 'video') {
                             content = `<video controls class="chat-img"><source src="/static/uploads/${msg.file_path}"></video>`;
                         } else {
