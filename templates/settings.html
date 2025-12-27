@@ -8,27 +8,19 @@
     <style>
         body { background: #0e1621; color: white; font-family: sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
         .settings-container { width: 100%; max-width: 400px; }
-        
         .header { display: flex; align-items: center; margin-bottom: 25px; }
         .back-btn { color: #2481cc; text-decoration: none; font-size: 20px; margin-right: 15px; }
-        
         .profile-card { background: #17212b; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-
-        /* Profile Image Section */
         .profile-section { position: relative; display: inline-block; margin-bottom: 20px; }
         .profile-pic { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #2481cc; object-fit: cover; background: #242f3d; }
         .upload-btn { position: absolute; bottom: 0; right: 0; background: #2481cc; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #17212b; }
-
         .info-group { text-align: left; margin-bottom: 15px; background: #242f3d; padding: 12px; border-radius: 12px; border-left: 4px solid #2481cc; }
-        .info-group label { display: block; font-size: 12px; color: #8ab4f8; margin-bottom: 5px; font-weight: bold; }
+        .info-group label { display: block; font-size: 11px; color: #8ab4f8; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
         .info-group span, .info-group input, .info-group select { background: transparent; border: none; color: white; width: 100%; font-size: 16px; outline: none; }
-        
-        /* Copy ID Style */
         .id-row { display: flex; justify-content: space-between; align-items: center; }
         .copy-btn { background: rgba(36, 129, 204, 0.2); color: #2481cc; border: 1px solid #2481cc; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
-
-        .btn-save { width: 100%; padding: 13px; background: #2481cc; border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; }
-        .btn-logout { width: 100%; padding: 13px; background: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; border-radius: 10px; font-weight: bold; margin-top: 15px; cursor: pointer; display: block; text-decoration: none; text-align: center; box-sizing: border-box; }
+        .btn-save { width: 100%; padding: 13px; background: #2481cc; border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-logout { width: 100%; padding: 13px; background: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; border-radius: 10px; font-weight: bold; margin-top: 15px; display: block; text-decoration: none; text-align: center; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -36,54 +28,49 @@
 <div class="settings-container">
     <div class="header">
         <a href="/friends" class="back-btn"><i class="fas fa-arrow-left"></i></a>
-        <h2 style="margin: 0; font-size: 20px;">ការកំណត់ (Settings)</h2>
+        <h2 style="margin: 0; font-size: 20px;">ការកំណត់</h2>
     </div>
 
     <div class="profile-card">
         <form action="/update_profile_pic" method="POST" enctype="multipart/form-data" id="picForm">
             <div class="profile-section">
-                {% if user.profile_pic %}
-                    <img src="/static/uploads/{{ user.profile_pic }}" class="profile-pic" id="preview">
-                {% else %}
-                    <div class="profile-pic" style="display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold;">{{ user.name[0] | upper }}</div>
-                {% endif %}
-                <label for="file-upload" class="upload-btn">📷</label>
+                <img src="/static/uploads/{{ user.profile_pic or 'default.png' }}" class="profile-pic" id="preview">
+                <label for="file-upload" class="upload-btn"><i class="fas fa-camera"></i></label>
                 <input id="file-upload" type="file" name="profile_pic" hidden onchange="document.getElementById('picForm').submit()">
             </div>
         </form>
 
         <form action="/update_info" method="POST">
             <div class="info-group">
-                <label>លេខសម្គាល់ (ID)</label>
+                <label>លេខសម្គាល់ ID</label>
                 <div class="id-row">
                     <span id="userId" style="font-weight: bold; color: #2481cc;">{{ user.user_id_number }}</span>
-                    <button type="button" class="copy-btn" onclick="copyID()">Copy</button>
+                    <button type="button" class="copy-btn" onclick="copyID()">ចម្លង</button>
                 </div>
             </div>
 
             <div class="info-group">
-                <label>អ៊ីមែល (មិនអាចកែបាន)</label>
-                <span style="opacity: 0.6;">{{ user.email }}</span>
+                <label>អ៊ីមែល</label>
+                <input type="text" value="{{ user.email }}" readonly style="opacity: 0.5;">
             </div>
 
             <div class="info-group">
-                <label><i class="fas fa-user"></i> ឈ្មោះ</label>
+                <label>ឈ្មោះបង្ហាញ</label>
                 <input type="text" name="name" value="{{ user.name }}" required>
             </div>
 
             <div class="info-group">
-                <label><i class="fas fa-venus-mars"></i> ភេទ</label>
+                <label>ភេទ</label>
                 <select name="gender">
-                    <option value="Male" {% if user.gender == 'Male' %}selected{% endif %}>ប្រុស (Male)</option>
-                    <option value="Female" {% if user.gender == 'Female' %}selected{% endif %}>ស្រី (Female)</option>
-                    <option value="Other" {% if user.gender == 'Other' %}selected{% endif %}>ផ្សេងៗ (Other)</option>
+                    <option value="Male" {% if user.gender == 'Male' %}selected{% endif %}>ប្រុស</option>
+                    <option value="Female" {% if user.gender == 'Female' %}selected{% endif %}>ស្រី</option>
                 </select>
             </div>
 
             <button type="submit" class="btn-save">រក្សាទុកការផ្លាស់ប្តូរ</button>
         </form>
 
-        <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> ចាកចេញ (Logout)</a>
+        <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> ចាកចេញ</a>
     </div>
 </div>
 
