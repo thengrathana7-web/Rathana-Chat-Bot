@@ -3,136 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Rathana-Chat-Bot</title>
+    <title>Welcome to Rathana Chat</title>
     <style>
+        :root {
+            --bg-dark: #0e1621;
+            --box-bg: #17212b;
+            --input-bg: #242f3d;
+            --primary-blue: #2481cc;
+            --text-white: #ffffff;
+            --text-gray: #b1b1b1;
+        }
+
         body { 
-            background: #0e1621; 
-            color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text-white); 
+            font-family: 'Segoe UI', 'Khmer OS Battambang', sans-serif; 
             margin: 0;
             display: flex;
-            flex-direction: column; /* បន្ថែមដើម្បីឱ្យ Header នៅខាងលើ */
+            flex-direction: column;
             height: 100vh;
         }
 
-        /* Header ថ្មី */
+        /* Top Bar */
         .top-bar {
-            background: #17212b; 
-            padding: 15px 20px; 
+            background: var(--box-bg); 
+            padding: 15px 25px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
+        .logo { font-size: 20px; font-weight: bold; margin: 0; }
+        .logo span { color: var(--primary-blue); }
+
+        .settings-link {
+            text-decoration: none; 
+            font-size: 22px;
+            transition: 0.3s ease;
+        }
+        .settings-link:hover { transform: rotate(90deg); display: inline-block; }
+
+        /* Login Container */
         .main-container {
             flex: 1;
             display: flex; 
             justify-content: center; 
             align-items: center;
+            padding: 20px;
         }
 
         .login-box { 
-            background: #17212b; 
+            background: var(--box-bg); 
             padding: 40px; 
-            border-radius: 15px; 
-            width: 90%;
-            max-width: 350px; 
+            border-radius: 20px; 
+            width: 100%;
+            max-width: 380px; 
             text-align: center; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
 
-        h2 { 
-            font-size: 22px; 
-            margin-bottom: 25px; 
-            color: white;
-        }
+        h2 { font-size: 24px; margin-bottom: 10px; }
+        p { color: var(--text-gray); margin-bottom: 25px; font-size: 14px; }
+
+        /* Form Styling */
+        .input-group { text-align: left; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: var(--text-gray); }
 
         input { 
             width: 100%; 
             padding: 14px; 
-            margin: 10px 0; 
-            border-radius: 8px; 
-            border: none; 
-            background: #242f3d; 
-            color: white; 
+            border-radius: 10px; 
+            border: 2px solid transparent; 
+            background: var(--input-bg); 
+            color: var(--text-white); 
             box-sizing: border-box; 
             outline: none;
-        }
-
-        input:focus {
-            border: 1px solid #2481cc;
-        }
-
-        .btns { 
-            display: flex; 
-            gap: 12px; 
-            margin-top: 15px; 
-        }
-
-        button { 
-            flex: 1; 
-            padding: 12px; 
-            border-radius: 8px; 
-            border: none; 
-            cursor: pointer; 
-            font-weight: bold; 
             font-size: 15px;
             transition: 0.3s;
         }
 
-        .btn-login { 
-            background: #2481cc; 
-            color: white; 
+        input:focus { border-color: var(--primary-blue); }
+
+        .btns { 
+            display: flex; 
+            flex-direction: column;
+            gap: 12px; 
+            margin-top: 20px; 
         }
 
-        .btn-login:hover {
-            background: #1d6fa5;
+        button { 
+            width: 100%;
+            padding: 14px; 
+            border-radius: 10px; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 16px;
+            transition: 0.3s;
         }
+
+        .btn-login { 
+            background: var(--primary-blue); 
+            color: white; 
+        }
+        .btn-login:hover { background: #1d6fa5; transform: translateY(-2px); }
 
         .btn-reg { 
             background: transparent; 
-            color: #2481cc; 
-            border: 1px solid #2481cc; 
+            color: var(--primary-blue); 
+            border: 2px solid var(--primary-blue); 
         }
+        .btn-reg:hover { background: rgba(36, 129, 204, 0.1); }
 
-        .btn-reg:hover {
-            background: rgba(36, 129, 204, 0.1);
-        }
-
-        .settings-link {
-            text-decoration: none; 
-            color: #2481cc; 
-            font-size: 20px;
-            transition: 0.2s;
-        }
-
-        .settings-link:hover {
-            transform: rotate(45deg);
-            display: inline-block;
+        .footer-note {
+            margin-top: 25px;
+            font-size: 13px;
+            color: var(--text-gray);
         }
     </style>
 </head>
 <body>
+
     <div class="top-bar">
-        <h2 style="margin: 0; font-size: 18px;">Rathana Chat <span style="color: #2481cc;">Bot</span></h2>
+        <div class="logo">Rathana Chat <span>App</span></div>
         <a href="/settings" class="settings-link">⚙️</a>
     </div>
 
     <div class="main-container">
         <div class="login-box">
-            <h2>Welcome</h2>
+            <h2>ស្វាគមន៍មកវិញ</h2>
+            <p>សូមចូលប្រើប្រាស់គណនីរបស់អ្នក</p>
             
             <form action="/login" method="POST">
-                <input type="email" name="email" placeholder="Email" required>
-                <input type="password" name="password" placeholder="Password" required>
+                <div class="input-group">
+                    <label>អ៊ីមែល (Email)</label>
+                    <input type="email" name="email" placeholder="បញ្ចូលអ៊ីមែល" required>
+                </div>
+                <div class="input-group">
+                    <label>លេខសម្ងាត់ (Password)</label>
+                    <input type="password" name="password" placeholder="បញ្ចូលលេខសម្ងាត់" required>
+                </div>
                 
                 <div class="btns">
-                    <button type="submit" class="btn-login">Login</button>
-                    <button type="button" class="btn-reg" onclick="location.href='/register'">Register</button>
+                    <button type="submit" class="btn-login">ចូលប្រើប្រាស់</button>
+                    <button type="button" class="btn-reg" onclick="location.href='/register'">បង្កើតគណនីថ្មី</button>
                 </div>
             </form>
+
+            <div class="footer-note">
+                សុវត្ថិភាព និងល្បឿនលឿនក្នុងការសន្ទនា
+            </div>
         </div>
     </div>
+
 </body>
 </html>
