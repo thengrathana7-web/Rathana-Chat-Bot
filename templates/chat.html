@@ -13,13 +13,11 @@
         .chat-with-name { font-weight: bold; font-size: 15px; }
         .status { font-size: 11px; color: #40a7e3; }
 
-        /* Media styles in chat */
         .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; cursor: pointer; }
         .chat-audio { width: 100%; max-width: 200px; height: 35px; margin-top: 5px; }
 
         .search-container { position: relative; width: 120px; }
         .search-container input { width: 100%; padding: 6px 12px; border-radius: 15px; border: none; background: #242f3d; color: white; outline: none; font-size: 12px; box-sizing: border-box; }
-        #searchResult { position: absolute; top: 40px; right: 0; width: 200px; background: #17212b; border-radius: 10px; padding: 10px; display: none; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         
         #contactList { display: flex; overflow-x: auto; background: #17212b; padding: 10px; gap: 15px; border-bottom: 1px solid #0e1621; white-space: nowrap; scrollbar-width: none; }
         
@@ -31,9 +29,18 @@
         .record-btn { color: white; font-size: 22px; cursor: pointer; background: none; border: none; padding: 0; transition: 0.2s; }
         .send-btn { color: #2481cc; font-size: 22px; cursor: pointer; background: none; border: none; }
 
-        /* Emoji Picker Container */
-        #emojiPickerContainer { position: absolute; bottom: 70px; left: 10px; display: none; z-index: 1000; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
-        emoji-picker { --num-columns: 8; --category-emoji-size: 1.2rem; width: 300px; height: 400px; }
+        /* បន្ថែម Style សម្រាប់ Emoji Picker */
+        #emojiPickerContainer { 
+            position: absolute; 
+            bottom: 75px; 
+            left: 10px; 
+            display: none; 
+            z-index: 1000; 
+            box-shadow: 0 5px 25px rgba(0,0,0,0.6); 
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        emoji-picker { width: 300px; height: 400px; }
     </style>
 </head>
 <body>
@@ -45,12 +52,6 @@
         </div>
         <div class="search-container">
             <input type="number" id="userSearch" placeholder="Search ID...">
-            <div id="searchResult">
-                <div id="resultInfo" style="display:none;" class="result-item">
-                    <div id="resName" style="font-weight: bold; color: white;"></div>
-                    <button id="addContactBtn">Chat</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -74,10 +75,8 @@
         <input type="text" id="msgInput" placeholder="សរសេរសារ..." autocomplete="off">
 
         <button id="recordBtn" class="record-btn" 
-                onmousedown="startRecording()" 
-                onmouseup="stopRecording()" 
-                ontouchstart="startRecording()" 
-                ontouchend="stopRecording()">
+                onmousedown="startRecording()" onmouseup="stopRecording()" 
+                ontouchstart="startRecording()" ontouchend="stopRecording()">
             <i class="fas fa-microphone"></i>
         </button>
 
@@ -97,24 +96,27 @@
         let audioChunks = [];
         let refreshInterval = null;
 
-        // --- មុខងារ Emoji ---
+        // --- ១. កូដសម្រាប់គ្រប់គ្រង Emoji (កែលម្អថ្មី) ---
         emojiBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // ការពារកុំឱ្យវាបិទវិញភ្លាមៗ
             const isVisible = emojiPickerContainer.style.display === 'block';
             emojiPickerContainer.style.display = isVisible ? 'none' : 'block';
         });
 
+        // នៅពេលចុចរើស Emoji
         emojiPicker.addEventListener('emoji-click', event => {
-            msgInput.value += event.detail.unicode;
+            msgInput.value += event.detail.unicode; // បញ្ចូល Emoji ទៅក្នុងប្រអប់សរសេរ
+            msgInput.focus(); // ឱ្យ Cursor នៅជាប់ក្នុងប្រអប់ដដែល
         });
 
+        // បិទផ្ទាំង Emoji ពេលចុចកន្លែងផ្សេង
         document.addEventListener('click', (e) => {
             if (!emojiPickerContainer.contains(e.target) && e.target !== emojiBtn) {
                 emojiPickerContainer.style.display = 'none';
             }
         });
 
-        // --- មុខងារផ្ញើសារជាអក្សរ ---
+        // --- ២. មុខងារផ្ញើសារជាអក្សរ ---
         function sendMessage() {
             const text = msgInput.value.trim();
             if (text !== "" && window.currentReceiverId) {
@@ -124,46 +126,24 @@
                     body: JSON.stringify({ message: text, receiver_id: window.currentReceiverId, msg_type: 'text' })
                 }).then(() => {
                     msgInput.value = "";
-                    emojiPickerContainer.style.display = 'none';
+                    emojiPickerContainer.style.display = 'none'; // បិទ Emoji ពេលផ្ញើរួច
                     loadChatHistory(window.currentReceiverId);
                 });
             }
         }
 
-        // --- មុខងារ Upload រូបភាព/វីដេអូ ---
-        function uploadMedia() {
-            const fileInput = document.getElementById('mediaInput');
-            if (!fileInput.files[0] || !window.currentReceiverId) return;
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            formData.append('receiver_id', window.currentReceiverId);
-            formData.append('type', fileInput.files[0].type.startsWith('image') ? 'image' : 'video');
-
-            fetch('/send_media', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === "sent") loadChatHistory(window.currentReceiverId);
-                fileInput.value = ""; 
-            });
-        }
-
-        // --- មុខងារ Microphone (Voice Recording) ---
+        // --- ៣. មុខងារ Microphone ---
         async function startRecording() {
             if (!window.currentReceiverId) return;
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                
                 mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                 mediaRecorder.onstop = sendAudio;
-                
                 mediaRecorder.start();
                 document.getElementById('recordBtn').style.color = 'red';
-            } catch (err) {
-                alert("សូមបើកសិទ្ធិប្រើ Microphone!");
-            }
+            } catch (err) { alert("សូមបើកសិទ្ធិប្រើ Microphone!"); }
         }
 
         function stopRecording() {
@@ -179,13 +159,24 @@
             formData.append('file', audioBlob, 'voice.webm');
             formData.append('type', 'audio');
             formData.append('receiver_id', window.currentReceiverId);
-
             fetch('/send_media', { method: 'POST', body: formData })
             .then(res => res.json())
             .then(data => { if(data.status === 'sent') loadChatHistory(window.currentReceiverId); });
         }
 
-        // --- មុខងារបង្ហាញសារ (Display Messages) ---
+        // --- ៤. មុខងារ Upload Media ---
+        function uploadMedia() {
+            const fileInput = document.getElementById('mediaInput');
+            if (!fileInput.files[0] || !window.currentReceiverId) return;
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('receiver_id', window.currentReceiverId);
+            formData.append('type', fileInput.files[0].type.startsWith('image') ? 'image' : 'video');
+            fetch('/send_media', { method: 'POST', body: formData })
+            .then(() => { loadChatHistory(window.currentReceiverId); fileInput.value = ""; });
+        }
+
+        // --- ៥. មុខងារ Load Chat ---
         function loadChatHistory(receiverId) {
             fetch(`/get_messages/${receiverId}`)
                 .then(res => res.json())
@@ -195,17 +186,9 @@
                         const isMe = msg.sender_id == {{ session['user_id'] }};
                         const style = isMe ? "background: #2b5278; align-self: flex-end;" : "background: #182533; align-self: flex-start;";
                         const time = msg.timestamp.split(' ')[1].substring(0,5);
-                        
-                        let content = "";
-                        if (msg.msg_type === 'image') {
-                            content = `<img src="/static/uploads/${msg.file_path}" class="chat-img" onclick="window.open(this.src)">`;
-                        } else if (msg.msg_type === 'audio') {
-                            content = `<audio controls class="chat-audio"><source src="/static/uploads/${msg.file_path}" type="audio/mpeg"></audio>`;
-                        } else if (msg.msg_type === 'video') {
-                            content = `<video controls class="chat-img"><source src="/static/uploads/${msg.file_path}"></video>`;
-                        } else {
-                            content = msg.message;
-                        }
+                        let content = msg.msg_type === 'image' ? `<img src="/static/uploads/${msg.file_path}" class="chat-img" onclick="window.open(this.src)">` :
+                                     msg.msg_type === 'audio' ? `<audio controls class="chat-audio"><source src="/static/uploads/${msg.file_path}"></audio>` :
+                                     msg.msg_type === 'video' ? `<video controls class="chat-img"><source src="/static/uploads/${msg.file_path}"></video>` : msg.message;
 
                         chatHTML += `<div style="${style} padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; max-width: 75%; color: white;">
                                         ${content} 
@@ -226,10 +209,6 @@
             if(refreshInterval) clearInterval(refreshInterval);
             refreshInterval = setInterval(() => loadChatHistory(id), 3000);
         }
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const uid = urlParams.get('uid');
-        if (uid) startPrivateChat(uid, "{{ chat_with_name }}");
     </script>
 </body>
 </html>
