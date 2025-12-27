@@ -3,10 +3,20 @@ import sqlite3
 import random
 from datetime import timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "rathana_secret_123")
 app.permanent_session_lifetime = timedelta(days=30)
+
+# ការកំណត់ទីតាំងសម្រាប់រក្សារូបភាព Profile
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# បង្កើត Folder បើមិនទាន់មាន
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 def get_db():
     db_path = os.path.join(os.path.dirname(__file__), 'database.db')
@@ -37,10 +47,12 @@ def init_db():
 
 init_db()
 
+# --- Routes ដើម ---
+
 @app.route('/')
 def welcome():
     if 'user_id' in session:
-        return redirect(url_for('friend_list')) # ប្តូរទៅកាន់បញ្ជីមិត្តភក្តិ
+        return redirect(url_for('friend_list'))
     return render_template('welcome.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -65,7 +77,7 @@ def register():
             session['user_name'] = name
             session['id_num'] = user_id_number
             
-            return redirect(url_for('friend_list')) # ទៅកាន់បញ្ជីមិត្តភក្តិក្រោយ Register
+            return redirect(url_for('friend_list'))
         except Exception as e:
             return f"កំហុស៖ {str(e)}"
     return render_template('register.html')
@@ -84,18 +96,16 @@ def login():
         session['user_id'] = user['id']
         session['user_name'] = user['name']
         session['id_num'] = user['user_id_number']
-        return redirect(url_for('friend_list')) # ទៅកាន់បញ្ជីមិត្តភក្តិក្រោយ Login
+        return redirect(url_for('friend_list'))
     
     return "Email ឬ Password មិនត្រឹមត្រូវ!"
 
-# --- មុខងារថ្មី៖ បញ្ជីមិត្តភក្តិ ---
 @app.route('/friends')
 def friend_list():
     if 'user_id' not in session:
         return redirect(url_for('welcome'))
     
     db = get_db()
-    # បង្ហាញអ្នកប្រើប្រាស់ផ្សេងៗដែលបានចុះឈ្មោះក្នុងប្រព័ន្ធ
     friends = db.execute('SELECT id, name, user_id_number, profile_pic FROM users WHERE id != ?', 
                          (session['user_id'],)).fetchall()
     
@@ -131,6 +141,65 @@ def chat():
                            old_messages=messages,
                            chat_with_name=chat_with_name,
                            receiver_id=receiver_id)
+
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        return redirect(url_for('welcome'))
+    
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+    return render_template('settings.html', user=user, user_name=user['name'], id_num=user['user_id_number'], user_email=user['email'], user_gender=user['gender'], user_profile_pic=user['profile_pic'])
+
+# --- មុខងារថ្មីដែលអ្នកចង់បន្ថែម ---
+
+@app.route('/update_info', methods=['POST'])
+def update_info():
+    if 'user_id' not in session: return redirect(url_for('welcome'))
+    
+    new_name = request.form.get('name')
+    new_gender = request.form.get('gender')
+    
+    db = get_db()
+    db.execute('UPDATE users SET name = ?, gender = ? WHERE id = ?', 
+               (new_name, new_gender, session['user_id']))
+    db.commit()
+    
+    session['user_name'] = new_name # Update session ភ្លាមៗ
+    return redirect(url_for('settings'))
+
+@app.route('/update_profile_pic', methods=['POST'])
+def update_profile_pic():
+    if 'user_id' not in session: return redirect(url_for('welcome'))
+    if 'profile_pic' not in request.files: return redirect(url_for('settings'))
+    
+    file = request.files['profile_pic']
+    if file.filename == '': return redirect(url_for('settings'))
+    
+    if file:
+        # បង្កើតឈ្មោះ file ថ្មីដោយប្រើ user_id ដើម្បីកុំឱ្យជាន់គ្នា (ឧទាហរណ៍៖ profile_1.png)
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = secure_filename(f"profile_{session['user_id']}.{ext}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        
+        db = get_db()
+        db.execute('UPDATE users SET profile_pic = ? WHERE id = ?', (filename, session['user_id']))
+        db.commit()
+        
+    return redirect(url_for('settings'))
+
+@app.route('/get_messages/<int:receiver_id>')
+def get_messages(receiver_id):
+    if 'user_id' not in session: return jsonify([])
+    db = get_db()
+    messages = db.execute('''
+        SELECT sender_id, message, timestamp 
+        FROM messages 
+        WHERE (sender_id = ? AND receiver_id = ?) 
+        OR (sender_id = ? AND receiver_id = ?)
+        ORDER BY timestamp ASC
+    ''', (session['user_id'], receiver_id, receiver_id, session['user_id'])).fetchall()
+    return jsonify([dict(msg) for msg in messages])
 
 @app.route('/search_friend', methods=['POST'])
 def search_friend():
